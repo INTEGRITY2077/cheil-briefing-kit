@@ -233,6 +233,8 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 그대로 보존하고 절대 덮어쓰지 않는다. 발행한 URL을 `output/artifact-url-slides-YYYY-MM-DD.txt`에
 기록하고 **당일 웹판 fmtbar의 프레젠테이션 링크에 당일 덱 URL을** 넣는다.
 아카이브 호의 프레젠테이션 탭은 링크 없는 라벨(PPTX 배포본)로 남긴다.
+덱 구성은 **당일 웹판 구성을 미러링해 매일 재구성한다** (2026-08-12 유착 사고에서):
+전일 슬라이드 승계 금지. 상시 자료는 '지난 호 안내' 1장으로만. 표지 헤드라인 = 당일 웹판 헤드라인.
 발행 이력: 08.12 덱 = 5cac5793-cd6d-4a64-aa34-7e438b9477fd (08.11 덱은 PPTX 파일로만 보존).
 브라우저(claude-in-chrome)가 없으면 이 절은 건너뛰고 보고에 남긴다.
 
@@ -250,6 +252,15 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 - 취재 과정 언어 금지 (2026-08-12 재발에서): "~로 확인됐다", "일정 정정", "8.12 새벽 기준",
   "보도로만 알던" 같은 문구는 편집실 일지다. 기사 언어로: 사실 자체를 서술하고 출처는 srcline으로.
   확인·정정·조회 시각 기록은 원장(facts.jsonl)의 note 필드에만 남긴다
+
+# 5b. 저장소 동기화 — 규칙이 바뀐 날은 반드시 한다
+이 문서(SKILL)나 `templates/`, `tools/`, `profiles/` 가 바뀌었으면, 루틴 마지막에
+킷 저장소(https://github.com/INTEGRITY2077/cheil-briefing-kit)에 반영한다:
+1. 이 문서를 킷의 `routine-SKILL.md` 로 복사한다 (경로는 원본 유지 — 설치자가 치환한다)
+2. `git add -A && git commit -m "규칙 갱신: <한 줄 요약>" && git push`
+3. push 실패(인증 등)면 조작하지 말고 보고에 "저장소 동기화 실패"라고 남긴다
+산출물(output/)과 개인 설정은 .gitignore 가 막는다 — 커밋 전 `git status` 로
+.env·config.yaml 이 스테이징에 없는지 확인한다. 있으면 커밋하지 않는다.
 
 # 6. 음성
 config의 `tts.engine` 을 본다. 기본값 `edge` 는 완전 자동이다:

@@ -1,0 +1,278 @@
+# 추적 대상 프로파일 — 제일기획
+#
+# 다른 회사를 추적하려면 이 파일만 새로 쓴다.
+# 킷의 나머지는 손대지 않는다.
+
+version: 1
+
+target:
+  name: 제일기획
+  name_en: Cheil Worldwide
+  ticker: "030000"
+  dart_query: 제일기획
+  peers: [이노션]
+  global_peers: [WPP, Omnicom, Publicis, Dentsu]
+  major_client: 삼성전자
+
+# ─────────────────────────────────────────────
+# 티어 정의
+# ─────────────────────────────────────────────
+tiers:
+  T1: { desc: 의사결정 직결. 정기·캘린더 기반, eval_score: 5 }
+  T2: { desc: 보조. 비정기 폴링,                eval_score: 2 }
+  T3: { desc: 콘텐츠·담론. 마감 기반,           eval_score: 1 }
+
+# ─────────────────────────────────────────────
+# 소스
+# ─────────────────────────────────────────────
+# last_checked / last_item 은 실행할 때마다 갱신된다.
+sources:
+
+  - id: dart-target
+    tier: T1
+    name: DART 공시
+    method: rss
+    url: https://dart.fss.or.kr/api/todayRSS.xml
+    filter: creator == target.name
+    fields: [title, link, category, pubDate, creator]
+    backup:
+      url: https://dart.fss.or.kr/dsab007/main.do
+      when: RSS 50건을 넘겨 밀렸을 가능성이 있을 때. 실적 발표일처럼 공시가 몰리는 날
+    forbidden:
+      # robots.txt Disallow. 자동 수집 대상에서 제외한다
+      - /dsaf001/main.do
+      - /report/viewer.do
+      - /report/download.do
+      - /pdf/download/
+      - /dsae001/selectPopup.ax
+      - /html/search/SearchCompany_M2.html
+    note: |
+      보고서 원문 뷰어는 robots.txt 가 막는다. 자동으로 열지 않는다.
+      원문이 필요한 항목은 ir-results 로 대체하고,
+      계열 비중과 거래처별 실수치는 분기 1회 사람이 화면으로 확인한다.
+    watch:
+      - 결산실적공시예고            # 분기 전면판 트리거
+      - 연결재무제표기준영업(잠정)실적
+      - 분기보고서
+      - 반기보고서
+      - 사업보고서
+      - 기업설명회(IR)개최
+    report_sections:               # 분기보고서에서 볼 목차
+      - 4. 매출 및 수주상황
+      - 2-2. 연결 포괄손익계산서
+      - 24. 부문별 정보
+      - 25. 특수관계자 및 특수관계자와의 주요거래
+    last_checked: 2026-08-12
+    last_item: "2026.07.31 최대주주등소유주식변동신고서 (08-12 07:09 RSS 신규 0건)"
+
+  - id: ir-events
+    tier: T1
+    name: IR Events
+    url: https://www.cheil.com/kr/ir/
+    method: Upcoming 표에서 예정 일정을 뽑아 agenda 로 적재
+    last_checked: 2026-08-12
+    last_item: "2026-08-11~14 삼성증권 Samsung Group Asia Conference — 제일기획 IR 표기. 삼성전자 IR은 자사 참가를 08-10~12로 표기 (F-029)"
+
+  - id: ir-results
+    tier: T1
+    name: 실적발표자료
+    url: https://www.cheil.com/kr/ir/financials/result
+    note: PDF 직링크 규칙이 연도 경계에서 바뀐다. 목록에서 링크를 읽고, 경로를 만들어 쓰지 않는다
+    last_checked: 2026-08-10
+    last_item: "2026년 2분기"
+
+  - id: broker-reports
+    tier: T1
+    name: 증권사 리포트
+    url: https://consensus.hankyung.com/analysis/list?skinType=business
+    method: 기간 지정 후 회사명 검색. PDF 는 downpdf?report_idx= 로 열린다
+    note: 지역별 성장률과 해외 비계열 비중은 여기에만 있다
+    last_checked: 2026-08-12
+    last_item: "2026.07.27 유진투자증권 (08-01~08-12 신규 0건)"
+
+  - id: ad-market-stats
+    tier: T1
+    name: 광고시장 통계
+    cadence: 연간
+    url:
+      - https://www.kobaco.co.kr/
+      - https://www.ad.co.kr/
+      - https://www.index.go.kr/
+      - https://kaa.or.kr/
+    last_checked: 2026-08-10
+
+  - id: trade-press
+    tier: T2
+    name: 업계 매체
+    url:
+      - https://www.brandbrief.co.kr/
+      - https://www.madtimes.co.kr/
+    method: 첫 화면 목록에서 신규분. 경쟁사 실적과 시장 구조 변화를 먼저 본다
+    last_checked: 2026-08-12
+    last_item: "2026-08-11 대홍기획 호치민 신규 오피스"
+
+  - id: client-newsroom
+    tier: T2
+    name: 삼성전자 뉴스룸
+    url: https://news.samsung.com/kr/
+    note: 광고 물량 선행지표. 언팩과 신제품 출시 일정은 agenda 로 넘긴다
+    last_checked: 2026-08-12
+    last_item: "2026-08-11 폴더블 헤리티지 전시·게임스컴 2026 참가"
+
+  - id: global-peers
+    tier: T2
+    name: 글로벌 4사
+    url:
+      - https://www.wpp.com/en/news
+      - https://www.omc.com/news/
+      - https://www.publicisgroupe.com/en/news/press-releases
+      - https://www.group.dentsu.com/en/news/release/
+    method: 목록에서 신규분. 전략 용어 변화를 키워드로 스캔한다
+    last_checked: 2026-08-12
+    last_item: "2026-08-06 WPP 2026 Interim Results (F-020). 이후 신규 없음"
+
+  - id: own-magazine
+    tier: T3
+    name: 제일 매거진 Insight
+    url: https://magazine.cheil.com/
+    cadence: 월 하순에 1~3편 묶음
+    method: 신규 글의 필자 소속, 원문 출처, 주제축을 기록한다
+    last_checked: 2026-08-12
+    last_item: "2026.07.24 /58457"
+
+  - id: own-channels
+    tier: T3
+    name: 자사 채널
+    url:
+      - https://www.cheil.com/kr/work/
+      - https://www.instagram.com/cheilworldwide_official/
+      - https://www.youtube.com/@Cheilworldwide
+    last_checked: 2026-08-10
+
+# ─────────────────────────────────────────────
+# 화두
+# ─────────────────────────────────────────────
+# 판정 규칙은 insight-guard.yaml 4-2절. 여기는 이 대상의 창과 현재 값만 둔다.
+spine:
+  windows:
+    - id: day
+      close: 매일 08:00
+      derive_from: 그날 신규 사실
+    - id: month
+      close: 말일
+      derive_from: 그달 신규 + 그달 supersede
+    - id: quarter
+      close: 실적발표일
+      derive_from: 분기보고서 + 실적발표자료 기준. 1차자료가 없으면 분기 화두를 세우지 않는다
+    - id: half
+      close: 반기보고서
+      derive_from: 반기 전체
+      is_main: true         # 다른 창의 관계를 재는 기준
+  main_window: half
+
+  current:
+    window: half
+    period: 2026 상반기
+    derived: 2026-08-11
+    결론: 재편이 상반기를 움직였다
+    발견: AI 는 1차자료에 한 건도 없다
+    근거:
+      - { fact: F-003, why: 회사가 밝힌 원인 둘 다 재편 관련 }
+      - { fact: F-006, why: 거래가 준 지역이 회사가 밝힌 재편 지역과 겹침 }
+      - { fact: F-007, why: 지역 법인 실적도 같은 방향 }
+    ranking:
+      - { theme: 해외 사업 재편, rank: 1, top_grade: 1차자료, facts: [F-003, F-006, F-007] }
+      - { theme: AI,           rank: 2, top_grade: 증권사,   facts: [F-008, F-009, F-010, F-012, F-013] }
+      - { theme: 영업이익 감소, rank: 근거, top_grade: 1차자료, facts: [F-001, F-002],
+          note: 재편의 표면이다. 톱이 아니라 톱의 근거로 쓴다 }
+    restated_when: 무관 누적 3건 또는 반기 마감
+
+  log: ../ledger/spine.jsonl
+
+# ─────────────────────────────────────────────
+# EVAL
+# ─────────────────────────────────────────────
+# 발행 여부가 아니라 분량을 정한다. 매일 나간다.
+eval:
+  scores:
+    tier1_new: 5
+    supersede: 4          # 정정은 그 자체가 소식이다
+    tier2_new: 2
+    tier3_new: 1
+    days_since_deep: 1    # 마지막 심층 이후 하루당 가산
+  relation_bonus:
+    # 메인 화두와의 관계에 따른 가산. 사실 등급과 직교한다
+    반증: 5               # 화두를 흔드는 것이 가장 값어치 있다
+    전환: 3
+    보강: 0               # 이미 아는 방향이다. 등급 점수만으로 충분하다
+    무관: 1               # 누적이 화두 재판정의 입력이므로 0 이 아니다
+  thresholds:
+    deep: 8               # 심층 리포트 추가 + 아티팩트 갱신
+    draft: 3              # 대본 초안만
+  floor:
+    always_include: [오늘 일정, 다가올 일정]
+    why: 신규가 없는 날에도 최소 분량이 나온다
+
+# ─────────────────────────────────────────────
+# SUPERSEDE
+# ─────────────────────────────────────────────
+# 같은 사실의 갱신판이 오면 이전 것을 눕히고 이력을 남긴다.
+supersede:
+  grade_order: [관찰, 보도, 증권사, 1차자료]     # 오른쪽이 높다
+  rules:
+    - 등급이 높은 자료가 오면 낮은 자료를 대체한다
+    - 추정치는 확정치로 대체한다
+    - 부분 기간은 누적 기간으로 대체하지 않는다. 둘 다 남긴다
+  known_chains:
+    - [컨센서스 추정, 잠정실적 공정공시, 분기보고서]
+    - [언론 보도, IR 실적발표자료]
+
+# ─────────────────────────────────────────────
+# 방송 대본
+# ─────────────────────────────────────────────
+script:
+  blocks: [오늘, 새 소식, 다가올 일정, 심층]
+  length_min: 2
+  length_max: 8
+  speakers:
+    A: 앵커
+    B: 기자
+  reference: concept_id     # 아티팩트 섹션 번호가 아니라 개념 ID로 건다. 섹션은 재배열된다
+
+# ─────────────────────────────────────────────
+# 반복 억제
+# ─────────────────────────────────────────────
+# ledger/broadcast_log.jsonl 에 무엇을 언제 읽었는지 기록한다.
+# 대본을 만들기 전에 이 파일을 먼저 읽는다.
+broadcast:
+  log: ../ledger/broadcast_log.jsonl
+
+  facts:
+    max_airings: 1
+    revive_on_supersede: true
+    revive_framing: 정정으로 다룬다. 같은 사실의 재방송이 아니라 갱신 소식이다
+
+  agenda:
+    max_airings: 3
+    air_on:
+      - new              # 새로 등재된 날
+      - d-7              # 이레 전
+      - d-0              # 당일
+    silent_otherwise: true
+
+  deep:
+    repeat_background: false
+    on_context_needed: 문서로 넘긴다. "자세한 경위는 브리핑 문서에 정리해 뒀습니다"
+
+  # 신규가 없는 날에 반복 대신 쓸 것
+  quiet_day:
+    - id: no_change
+      text: 변화 없음을 한 줄로 명시한다. 이것도 정보다
+    - id: pull_forward
+      text: D-7 보다 먼 일정 중 아직 다루지 않은 것 하나를 당겨온다
+    - id: stale_preview
+      text: stale_after 가 지난 개념을 갱신 예고로 쓴다
+      why: 정리 대상 목록이 그대로 "곧 바뀔 것" 목록이다
+  allow_short: true
+  min_minutes_hard: 2
+  never: [반복으로 분량 채우기, 근거 없는 전망으로 채우기]

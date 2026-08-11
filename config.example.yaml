@@ -1,0 +1,132 @@
+# 브리핑 킷 설정 — 기계마다 다른 값만 여기 둔다
+#
+# 사용법: 이 파일을 config.yaml 로 복사한 뒤 채운다.
+#         config.yaml 은 배포본에 포함하지 않는다 (.gitignore)
+#
+# 번들 안에는 절대경로도 계정명도 넣지 않는다. 전부 이 파일에서 읽는다.
+
+version: 1
+
+# ─────────────────────────────────────────────
+# 검토자
+# ─────────────────────────────────────────────
+# OKF 의 verified 필드에 들어가는 식별자다.
+# 로컬 계정명을 쓰지 않는다. 사내에서 통용되는 이름이나 사번 별칭을 쓴다.
+reviewer: human:reviewer
+
+# ─────────────────────────────────────────────
+# 경로 — 킷 루트 기준 상대경로
+# ─────────────────────────────────────────────
+paths:
+  bundle: ./okf                 # OKF 지식 번들
+  profiles: ./profiles
+  templates: ./templates
+  output: ./output              # 생성물. 배포본에 포함하지 않는다
+  archive: ./okf/archive
+
+# 추적 대상. profiles/ 아래 파일명에서 .yaml 을 뺀 값
+profile: cheil
+
+# ─────────────────────────────────────────────
+# 음성 생성
+# ─────────────────────────────────────────────
+tts:
+  # edge | notebooklm | sapi | custom | none
+  #
+  #   edge       : 기본값. Edge TTS (신경망, 키·로그인 불필요, 완전 자동).
+  #                대본을 한 글자 그대로 낭독한다. tools/make_audio.py 가 실행한다.
+  #                pip install edge-tts 한 번이면 된다.
+  #   notebooklm : 생성형 2인 대화. 자동화하지 않으며 대본을 재구성한다.
+  #                2026-08-11 실측 — 발음 오류("제일기업"), 애드리브 오프닝,
+  #                길이 지시 무시(2~3분 요청 → 5:21, 조인 프롬프트 후에도 14:28),
+  #                대본에 없는 프레임 생성("현금 보낸"). 프롬프트로 잡히지 않는다.
+  #                정확성이 필요한 정기 브리핑에 쓰지 않는다.
+  #   sapi       : Windows 내장 음성. 완전 자동이지만 품질이 낮다.
+  #   custom     : 외부 명령 호출. 아래 custom 블록을 채운다.
+  #   none       : 대본까지만 만들고 끝낸다.
+  engine: gemini      # 키가 없으면 gemini.on_missing_key 에 따라 edge 로 자동 강등
+
+  edge:
+    voice_anchor: ko-KR-SunHiNeural     # [A] 앵커
+    voice_reporter: ko-KR-InJoonNeural  # [B] 기자
+    rate: "+8%"                         # 뉴스 낭독 속도
+    tool: ./tools/make_audio.py
+
+  # 본인용 최상 음질. 키가 필요해 배포 킷 기본이 아니다.
+  # .env 에 GEMINI_API_KEY 를 넣으면 켜진다 (.env 는 gitignore, 배포에 미포함).
+  # 무료층: aistudio.google.com/apikey · 멀티스피커 + 스타일 지시 · 대본 그대로 낭독
+  gemini:
+    voice_anchor: Kore      # [A] 앵커
+    voice_reporter: Charon  # [B] 기자
+    tool: ./tools/make_audio_gemini.py
+    on_missing_key: edge    # 키가 없으면 edge 로 자동 강등
+
+  notebooklm:
+    handoff: ./output/notebooklm    # 업로드할 대본과 프롬프트를 여기 떨군다
+    prompt_template: ./templates/notebooklm-prompt.md
+    # 생성된 파일을 내려받아 두는 위치. 사람이 옮겨 넣는다
+    audio_in: ./output/audio
+
+  # 나중에 바꾸려면 engine 을 sapi 로 두고 아래를 쓴다
+  sapi:
+    voice: auto                 # 설치된 ko-KR 음성을 탐지한다. 이름을 박지 않는다
+    rate_anchor: -10            # [A] 앵커 속도 (%)
+    rate_reporter: 8            # [B] 기자 속도 (%)
+    pitch_reporter: 8           # [B] 피치 (%)
+    on_missing_voice: script-only    # ko-KR 음성이 없으면 대본까지만
+
+  # 외부 TTS 를 붙일 자리. {script} 와 {audio} 가 치환된다
+  custom:
+    command: ""
+    # 예시
+    #   command: "python tools/tts.py --in {script} --out {audio} --voice ko-female"
+    output_format: m4a
+    timeout_sec: 900
+
+# ─────────────────────────────────────────────
+# 스케줄 — 자유롭게 바꾼다
+# ─────────────────────────────────────────────
+# 표준 5필드 cron 이고 로컬 시간 기준이다. 분 시 일 월 요일.
+#
+#   "0 8 * * *"     매일 오전 8시          (기본값)
+#   "0 7 * * 1-5"   평일만 오전 7시
+#   "30 6 * * *"    매일 오전 6시 30분
+#   "0 8,18 * * *"  하루 두 번, 8시와 18시
+#
+# 앱이 켜져 있을 때만 실행된다. 꺼져 있으면 다음 실행 때 밀린 것이 함께 돈다.
+# 출근 전에 들으려면 기상 시각보다 조금 앞에 둔다. 생성에 3~5분 걸린다.
+schedule:
+  daily:     "0 7 * * *"        # 매일 오전 7시 생성 시작
+  publish_at: "07:45"           # 배포(공유 버전 재지정)는 이 시각 이후에만. 생성과 배포를 나눈다
+  weekly:    "10 7 * * 1"       # 월요일 오전 7시 10분. 일일 실행과 겹치지 않게 뒤에 둔다
+  monthly:   "20 7 1 * *"       # 매월 1일 오전 7시 20분
+  quarterly: trigger            # 시각 없음. DART 결산실적공시예고를 감지하면 돈다
+
+  # 스케줄을 바꾼 뒤에는 등록된 태스크도 갱신해야 반영된다.
+  # Claude 에게 "브리핑 스케줄을 config 대로 갱신해줘" 라고 하면 된다.
+
+# ─────────────────────────────────────────────
+# 보존 정책
+# ─────────────────────────────────────────────
+retention:
+  audio_days: 30                # 대본이 있으면 재생성 가능하다
+  daily_log_days: 90            # 이후 월 단위로 병합
+  script: keep                  # 가볍다
+  facts: keep                   # supersede 이력이 자산이다
+  artifact: quarterly_only      # 일일판은 최신 1개만
+
+maintenance:
+  active_concept_target: 50     # 이 수를 넘으면 분기 압축 대상
+  link_check: monthly
+  health_report: monthly
+
+# ─────────────────────────────────────────────
+# 가드
+# ─────────────────────────────────────────────
+guards:
+  tone: ./templates/tone-guard.yaml
+  style: ./templates/style-guard.yaml
+  style_genre_map:
+    artifact: report
+    script: broadcast
+    ledger: ledger

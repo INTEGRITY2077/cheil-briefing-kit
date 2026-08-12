@@ -299,13 +299,17 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 산출물(output/)과 개인 설정은 .gitignore 가 막는다 — 커밋 전 `git status` 로
 .env·config.yaml 이 스테이징에 없는지 확인한다. 있으면 커밋하지 않는다.
 
-# 6. 음성
-config의 `tts.engine` 을 본다. 기본값 `edge` 는 완전 자동이다:
-`python tools/make_audio.py output/script/YYYY-MM-DD.md` — 대본을 한 글자 그대로 낭독한다.
-생성 후 파일 크기가 0 이 아닌지, 대사 수만큼 세그먼트가 찍혔는지 로그로 확인한다.
+# 6. 음성 — 사다리: supertonic → gemini → edge (2026-08-12 확정)
+config의 `tts.engine` 을 본다. **1순위 `supertonic`** (로컬 ONNX, 키·네트워크 불필요):
+`python tools/make_audio_supertonic.py output/script/YYYY-MM-DD.md`
+— 기본 보이스는 `voices/anchor-f1f2-30.json`(실청 채택 블렌드), 합성 speed 1.05 고정
+(배속은 웹판 플레이어 기본 1.3×가 담당 — tts-guard pace 절). 1인 대본(A: 줄만)이 표준이고,
+영역 전환 접속사 규칙은 script-radio 템플릿을 따른다.
+supertonic 실패(미설치·모델 다운로드 불가) 시 **2순위 `gemini`**:
+`python tools/make_audio_gemini.py <대본> <출력.wav>` — `.env`의 GEMINI_API_KEY가
+없으면 **3순위 `edge`** 강등(`tools/make_audio.py`). 어느 단으로 강등했는지 보고에 남긴다.
+생성 후 파일 크기가 0 이 아닌지, 재생 길이가 대본 분량과 맞는지 확인한다.
 `sapi` 면 ko-KR 음성을 탐지해 생성하고, 없으면 대본까지만 만들고 그 사실을 남긴다.
-`gemini` 면 `python tools/make_audio_gemini.py <대본> <출력.wav>` — `.env`의 GEMINI_API_KEY가
-없으면 config의 `on_missing_key: edge` 강등으로 edge 경로를 탄다.
 `notebooklm` 관련 참조물은 원작자 로컬 전용이다 — 정기 브리핑에 쓰지 않는다.
 
 노트북LM 을 쓸 때의 함정 (2026-08-11 실측):

@@ -32,12 +32,18 @@
 - 내장 브라우저가 없으면 claude-in-chrome(크롬 확장) 여부를 확인하고, 둘 다 없으면
   "발행은 되지만 공유 설정은 매일 수동"이라고 고지한다.
 
-### 0-4. TTS 경로 판별
-- 기본값 **edge**(무료·키 불필요)로 항상 동작 가능함을 확인한다 (`pip show edge-tts` 또는 설치 예정 표시)
-- **gemini**(음질 우수)를 원하면: "Google AI Studio(https://aistudio.google.com/apikey)에서
-  본인 키를 발급받아, 설치 후 `.env` 파일의 `GEMINI_API_KEY=` 뒤에 직접 붙여넣어 주세요.
-  키는 채팅에 붙여넣지 마세요 — Claude는 키를 보거나 출력하지 않습니다." 라고 안내한다.
-  키가 없어도 config의 `on_missing_key: edge` 강등으로 동작한다.
+### 0-4. TTS 경로 판별 — 사다리: supertonic → gemini → edge
+- 기본값 **supertonic**(로컬 ONNX, 키·네트워크 불필요, Windows 네이티브 동작 확인):
+  `python -m pip install supertonic soundfile` 가능한지 확인한다. 최초 1회 실행 때
+  모델(~99MB)을 HuggingFace에서 자동 다운로드한다고 미리 안내한다.
+  기본 보이스는 킷의 `voices/anchor-f1f2-30.json` — 합성 배속은 걸지 않는다(음절 씹힘,
+  tts-guard pace 절). 청취 배속은 웹판 플레이어가 기본 1.3×.
+- **gemini**(2순위, 감정·톤 지시가 필요할 때)를 원하면: "Google AI Studio
+  (https://aistudio.google.com/apikey)에서 본인 키를 발급받아, 설치 후 `.env` 파일의
+  `GEMINI_API_KEY=` 뒤에 직접 붙여넣어 주세요. 키는 채팅에 붙여넣지 마세요 —
+  Claude는 키를 보거나 출력하지 않습니다." 라고 안내한다.
+- **edge**(3순위 예비, 네트워크 필요·키 불필요): `pip show edge-tts`. 위 둘이 모두
+  불가한 환경에서만 쓴다.
 
 ### 0-5. 사용자에게 묻는 것 (한 번에, 세 가지만)
 1. 설치 위치 (기본값 제안: 사용자 문서 폴더 아래 `briefing-kit`)

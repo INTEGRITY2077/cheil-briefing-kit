@@ -44,6 +44,7 @@ Claude가 저장소를 내려받고, 세 가지를 물어본 뒤(설치 위치 �
 
 | 경로 | 내용 |
 |---|---|
+| `CLAUDE.md` | **레포를 연 Claude의 역할 계약** — 기본은 설치자·운영자, 저장소 개발·push는 원작자 명시 요청 시에만 |
 | `SETUP.md` | Claude가 따라 하는 설치 절차 — 헬스체크 → 질문 3개 → 설치 → 루틴 등록 |
 | `routine-SKILL.md` | 매일 아침 루틴의 전체 지시서 (시각·경로는 config·설치 시 주입) |
 | `tools/` | TTS 사다리(`make_audio_supertonic.py` → `make_audio_gemini.py` → `make_audio.py`), 오디오 이식(`embed_radio.py`), 자동 게이트(`check_tables.py`·`check_exhibits.py`·`check_css_vars.py`·`check_formats.py`) |

@@ -256,9 +256,13 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 
 기계 게이트는 손이 아니라 스크립트로 돌린다 — 발행 직전 필수 실행:
 ```
-python tools/check_tables.py output/web/YYYY-MM-DD.html   # D6 표 판형 (종료코드 0 필수)
-python tools/check_exhibits.py output/web/YYYY-MM-DD.html # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
+python tools/check_tables.py output/web/YYYY-MM-DD.html    # D6 표 판형 (종료코드 0 필수)
+python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
+python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
+python tools/check_formats.py output/web/YYYY-MM-DD.html   # C5 판형 바 — 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
+`check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —
+덱을 만들고도 웹판에 문을 안 달면 독자에겐 없는 것과 같다 (2026-08-11 실측).
 눈으로 훑는 게이트(A·B·C)와 달리 D 계열은 정적 검사가 가능하므로, 가능한 것부터
 스크립트로 옮긴다. 새 반려가 정적으로 판정 가능하면 check_*.py 를 늘려라. 이 체크리스트는
 2026-08-11~12 사용자 반려 전건을 항목화한 것이다 — 같은 지적이 다시 나오면
@@ -277,6 +281,10 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 그대로 보존하고 절대 덮어쓰지 않는다. 발행한 URL을 `output/artifact-url-slides-YYYY-MM-DD.txt`에
 기록하고 **당일 웹판 fmtbar의 프레젠테이션 링크에 당일 덱 URL을** 넣는다.
 아카이브 호의 프레젠테이션 탭은 링크 없는 라벨(PPTX 배포본)로 남긴다.
+**덱 아티팩트에도 발행 직후 Share → Anyone with the link 를 켠다** — 웹판만 켜면
+fmtbar 링크가 남에게 404다 (2026-08-11 실측: 발표판이 private 인 채로 남아
+링크조차 붙지 않았다). 링크를 넣은 뒤 `python tools/check_formats.py <웹판.html>`
+(종료코드 0)로 판정하고 결과를 `eval/YYYY-MM-DD.md` 에 기록한다.
 덱 구성은 **당일 웹판 구성을 미러링해 매일 재구성한다** (2026-08-12 유착 사고에서):
 전일 슬라이드 승계 금지. 상시 자료는 '지난 호 안내' 1장으로만. 표지 헤드라인 = 당일 웹판 헤드라인.
 덱 발행 이력도 `output/artifact-url-slides-*.txt` 가 유일한 소스다.

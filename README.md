@@ -42,7 +42,7 @@ Claude가 저장소를 내려받고, 세 가지를 물어본 뒤(설치 위치 �
 |---|---|
 | `SETUP.md` | Claude가 따라 하는 설치 절차 — 헬스체크 → 질문 3개 → 설치 → 루틴 등록 |
 | `routine-SKILL.md` | 매일 아침 루틴의 전체 지시서 (시각·경로는 config·설치 시 주입) |
-| `tools/` | TTS 사다리(`make_audio_supertonic.py` → `make_audio_gemini.py` → `make_audio.py`), 오디오 이식(`embed_radio.py`), 자동 게이트(`check_tables.py`·`check_exhibits.py`) |
+| `tools/` | TTS 사다리(`make_audio_supertonic.py` → `make_audio_gemini.py` → `make_audio.py`), 오디오 이식(`embed_radio.py`), 자동 게이트(`check_tables.py`·`check_exhibits.py`·`check_css_vars.py`·`check_formats.py`) |
 | `voices/` | 확정 보이스 — F1+F2 블렌드 스타일 벡터 (매일 같은 목소리 보장) |
 | `templates/` | 발행 전 체크리스트(A~F), 전시물 우선 원칙, 대본 골격, 톤·스타일·TTS 게이트 |
 | `profiles/`, `okf/` | 소스 프로파일과 지식 원장(전부 공개자료 기반) |
@@ -54,7 +54,9 @@ Claude가 저장소를 내려받고, 세 가지를 물어본 뒤(설치 위치 �
 ## 산출물
 
 - **웹판**: 전시물(공시·IR 원문 재현+하이라이트+주석) 중심의 그날 뉴스, 상단에 라디오
-  플레이어(기본 1.3× 배속, −/+ 조절, 다운로드)
+  플레이어(기본 1.3× 배속, −/+ 조절). 아티팩트는 `allow-downloads`가 없는 iframe 안에서
+  돌아가 **브라우저가 다운로드를 막습니다** — 오디오 파일이 필요하면 로컬
+  `output/audio/YYYY-MM-DD.wav`를 배포 묶음에 첨부하세요
 - **라디오**: 1인 낭독이 표준(Supertonic, 영역 전환 접속사 규칙). 2인 앵커·기자 판형은
   Gemini 엔진을 선택한 날만
 - **프레젠테이션**: 웹판 전시물을 그대로 옮긴 슬라이드 + PPTX 보관본

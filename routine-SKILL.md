@@ -68,6 +68,11 @@ python -c "import json,os,datetime;p='output/ledger/run_log.jsonl';os.makedirs(o
 루틴 종료 시(성공이든 실패든) 종료 줄을 append 한다 — 같은 `started_at` 으로 짝을 맞추고
 `ended_at`, `mode`(생산/검증/중단), `result`(산출/quiet_day/검증만/실패), `artifacts`(만든
 파일 목록), 실패면 `reason` 을 채운다. 같은 줄 재기록이 아니라 **종료 줄 append** 다.
+산출을 낸 실행의 종료 줄에는 `gates` 필드 — 실제로 실행한 기계 게이트 목록과 종료코드,
+예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0"]`
+— 를 반드시 기록한다. **게이트 기록이 없는 발행은 실패다** — `check_run.py` 가 산출물이
+실존하는데 종료 줄의 gates 가 없거나 비어 있으면 실패로 판정한다 (2026-08-13 이슈 #18 —
+게이트가 있는데 실행 자체를 건너뛴 채 발행된 사고에서).
 이 두 줄이 없으면 "안 돈 날"과 "돌았는데 빈손인 날"을 가를 방법이 없다 — 이슈 #9 에서
 남은 증거가 scheduled-task 의 lastRunAt 타임스탬프 하나뿐이었다.
 
@@ -142,12 +147,6 @@ JSONL 정본(`output/ledger/`)은 gitignore 대상이라 배포되지 않는다 
 새 일정은 `okf/agenda/` 에 개념으로 만든다.
 
 # 3. EVAL
-**시작 전에 `profiles/<profile>.yaml` 의 `audience` 블록을 읽는다** — 무엇이 뉴스인지는
-거기서 갈린다. 이 브리핑의 독자는 회사의 의사결정자이고, 지면이 답하는 질문은
-「오늘 무슨 일이 있었나」가 아니라 「지금 우리가 어떤 결정 흐름 위에 있고 그것이 바깥
-자료에서 어떻게 보이나」다. 화두 선정은 등급 정렬 **이전에** audience 필터를 먼저 건다
-(insight-guard 4-2절 `audience_filter`) — 등급은 자료가 믿을 만한가이지 독자에게 중요한가가 아니다.
-
 `templates/eval-rubric.md` 로 계산해 `eval/YYYY-MM-DD.md` 에 기록한다.
 - 8점 이상 → 심층. 대본 4블록 + 아티팩트 갱신
 - 3~7점 → 표준. 3블록
@@ -325,7 +324,7 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 
 | 산출물 | style-guard genre | tone-guard | 추가 게이트 |
 |---|---|---|---|
-| 웹판 | report | 적용 | headline-guard(헤드라인), insight-guard(**전문 — 축·함의·화두**) |
+| 웹판 | report | 적용 | headline-guard(헤드라인), insight-guard(리드) |
 | 대본 | broadcast | 적용 | tts-guard(기호→발화, pace) |
 | 슬라이드 | report | 적용 | 독자 언어 게이트 + publish-checklist A4 |
 | 원장(OKF) | 적용 안 함 | 적용 안 함 | — |
@@ -359,9 +358,11 @@ python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계
 python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
 python tools/check_ledger.py                               # D7 원장 정합 — 매달린 참조·유효/대체 충돌·인덱스 신선도 (종료코드 0 필수)
 python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — 상한 초과 시 공개 공유가 거절된다 (종료코드 0 필수, config tts.embed.max_html_mb)
-python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
+python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8·H9(화두 구체성, issue #18) 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
+돌린 게이트와 종료코드는 run_log 종료 줄의 `gates` 필드에 그대로 옮긴다 (0-원장 절 —
+게이트 기록이 없는 발행은 check_run.py 가 실패로 판정한다).
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —
 덱을 만들고도 웹판에 문을 안 달면 독자에겐 없는 것과 같다 (2026-08-11 실측).
 덱을 만들지 않은 호(표준/간략 — 4c는 '선택, 심층인 날만')는 당일
@@ -470,7 +471,9 @@ supertonic 실패(미설치·모델 다운로드 불가) 시 **2순위 `gemini`*
 # 보고
 짧게 쓴다.
 - **실행 실체 판정** — `python tools/check_run.py` 종료코드와 요지 (0-원장 절.
-  산출물 부재면 이 보고는 실패 보고다 — 성공처럼 쓰지 않는다)
+  산출물 부재면 이 보고는 실패 보고다 — 성공처럼 쓰지 않는다. 종료코드 확인은
+  run_log 종료 줄에 `gates` 필드를 쓴 **뒤**에 한다 — 기록 전에 돌리면 자기 발행을
+  게이트 기록 없음으로 실패 판정한다)
 - EVAL 점수와 등급
 - 신규 사실 건수, supersede 건수
 - 게이트 결과 (산출물별)

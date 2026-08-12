@@ -134,6 +134,13 @@ SUPERSEDE 는 프로파일의 `supersede.grade_order` 와 `known_chains` 를 따
 
 SOT 참조는 개념 ID 로 건다.
 
+전시물 우선 원칙 (2026-08-12 확정): 웹판의 절 구성·전시물(1차자료 원문 재현+하이라이트+주석)·
+줄글 상한·quiet day 강등 사다리·마크업 계약·PPTX/라디오 분업은 킷의
+`templates/exhibit-first.md` 를 따른다 — 산출물 생성 전에 읽는다. 전시물마다 원문을
+`sources/YYYY-MM-DD/` 에 저장하고, 발행 직전 `python tools/check_exhibits.py <웹판.html>`
+(종료코드 0)을 반드시 실행해 결과를 `eval/YYYY-MM-DD.md` 에 기록한다. check는 존재·계약만
+판정하므로 질(판형 일치·하이라이트)은 호당 전시물 1개 무작위 스팟체크로 따로 기록한다.
+
 # 4b. 배포 — 공유 버전 재지정과 검증 (07:45 이후에만)
 
 **아티팩트를 갱신한 날에만 수행한다. 갱신하지 않았으면 건너뛴다.**
@@ -241,6 +248,7 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 기계 게이트는 손이 아니라 스크립트로 돌린다 — 발행 직전 필수 실행:
 ```
 python tools/check_tables.py output/web/YYYY-MM-DD.html   # D6 표 판형 (종료코드 0 필수)
+python tools/check_exhibits.py output/web/YYYY-MM-DD.html # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
 ```
 눈으로 훑는 게이트(A·B·C)와 달리 D 계열은 정적 검사가 가능하므로, 가능한 것부터
 스크립트로 옮긴다. 새 반려가 정적으로 판정 가능하면 check_*.py 를 늘려라. 이 체크리스트는

@@ -13,3 +13,6 @@ eval/
 !output/audio/.gitkeep
 !output/ppt/.gitkeep
 !output/ledger/.gitkeep
+
+# 호별 원문 저장소(전시물 원본) — 호 콘텐츠와 함께 로컬 전용
+sources/

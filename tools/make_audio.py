@@ -10,7 +10,10 @@
 한계: 감정 연기 지시는 안 된다. rate/pitch 만 조절 가능.
 세그먼트별 mp3 를 바이트 연결한다. 동일 코덱 파라미터라 재생에 문제없고 ffmpeg 이 필요 없다.
 """
-import asyncio, io, re, sys, os
+import asyncio, io, sys, os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from script_lib import parse_script
 
 USAGE = ("사용법: python tools/make_audio.py <대본.md> [출력.mp3]\n"
          "예: python tools/make_audio.py examples/sample-script.md output/audio/smoke-test.mp3")
@@ -35,14 +38,6 @@ def load_config_overrides():
         pass
 PAUSE_MS = 420        # 화자 전환 간격
 
-def parse(path):
-    lines = []
-    for raw in io.open(path, encoding="utf-8"):
-        m = re.match(r"^([AB]):\s*(.+)$", raw.strip())
-        if m:
-            lines.append((m.group(1), m.group(2)))
-    return lines
-
 async def synth(text, voice):
     import edge_tts
     buf = b""
@@ -65,7 +60,7 @@ async def main():
     dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
         os.path.dirname(src).replace("script", "audio"),
         os.path.splitext(os.path.basename(src))[0] + ".mp3")
-    lines = parse(src)
+    lines = parse_script(src)  # 대본 파싱은 script_lib 가 정본
     if not lines:
         print("A:/B: 형식의 대사가 없다:", src); sys.exit(1)
     os.makedirs(os.path.dirname(dst), exist_ok=True)

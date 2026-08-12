@@ -50,11 +50,10 @@
 - F3. PPTX 전시 슬라이드 노트에 `[EXHIBIT: 문서명|항목명]` 토큰 ≥1, 문서명이 웹판
   `data-doc`과 일치하는가. 라디오 대본에 `[EX: 문서명]` 참조 토큰 3~4개
 - F4. 전시물 계약 게이트 통과 — `python tools/check_exhibits.py <웹판.html>` 종료코드 0.
-  exhibit마다: `data-doc`·`data-item`·`data-unit`·`data-doc-date`+`data-src-url` 비어있지
-  않음, `.ex-head`·`.ex-hl`(1~3개)·`.ex-note`·`figcaption.ex-src` 존재, `sources/` 원문
-  파일 실존, 소스 도메인 화이트리스트(DART·회사 공식 IR/보도자료/뉴스룸·정부 통계 —
-  기사·유료 리포트 불가), `data-doc-date`<발행일이면 `.reexhibit`+`.ex-badge` 강제,
-  동일 `data-doc|item` 재전시 주 2회 이하
+  계약의 구체 값(필수 속성·자식 요소·`.ex-hl` 상한·도메인 화이트리스트·재전시 규칙)의
+  **정본은 `templates/exhibit-contract.yaml`** — check 가 그 값을 읽어 판정한다.
+  요지: 출처 data 속성+주석 3요소 전부 존재, 원문 파일 실존, 공식 소스만 전시,
+  과거 전시물은 재전시 표기 강제
 - F5. 게이트의 정직성 — 정적 게이트(check)는 **존재·계약만** 판정한다. 판형 일치·
   하이라이트의 질은 `eval/YYYY-MM-DD.md`의 수동 스팟체크(호당 전시물 1개 무작위 →
   원문 대조)로 분리해 기록한다. 출처 각주(`figcaption.ex-src`)에 원문 URL 의무

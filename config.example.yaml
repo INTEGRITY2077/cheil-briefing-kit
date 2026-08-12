@@ -57,6 +57,20 @@ tts:
   #   none       : 대본까지만 만들고 끝낸다.
   engine: supertonic  # 사다리: supertonic → gemini(키 있을 때) → edge
 
+  # ── 웹판 이식 (embed_radio.py) ──────────────────────────────
+  # 오디오는 data URI 로 싣는다. base64 는 원본의 4/3 로 부풀기 때문에
+  # 「AAC 크기 × 1.34 + 지면」 이 곧 호 크기다.
+  #
+  # 2026-08-12 실측: 3분 20초 대본을 96k 로 실었더니 AAC 2.45MB → base64 3,338KB →
+  # 호 3.28MB 가 됐고, 그 호는 **아티팩트 공개 공유가 거절됐다**
+  # ("This version can't be shared publicly…" — 문구가 크기를 말해 주지 않는다).
+  # 같은 음성을 64k 모노로 내리니 AAC 1.59MB → 호 2.14MB.
+  # 상한은 README 가 잡아 둔 「호가 3MB 안쪽」을 정본으로 삼는다.
+  embed:
+    bitrate: 64k        # AAC 비트레이트. 낭독은 64k 모노로 충분하다
+    channels: 1         # 1인 낭독이 표준이라 모노
+    max_html_mb: 3.0    # 웹판 상한. tools/check_size.py 가 판정한다 (D8)
+
   supertonic:
     # supertonic 은 1인 낭독이 표준이다 (script-radio 화자 구성 절).
     # 2인 판형은 gemini 엔진 전용 — 여기의 voice_reporter 는 예외 상황

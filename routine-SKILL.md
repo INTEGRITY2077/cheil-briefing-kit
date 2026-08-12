@@ -203,6 +203,10 @@ iframe sandbox에 allow-downloads가 없어 ⋮ 메뉴의 다운로드 항목 �
 WAV 를 그대로 data URI 로 실으면 호가 10MB 를 넘어 첫 렌더가 눈에 띄게 느리다.
 같은 음성이 1/4 로 줄고(7.42MB → 2.09MB) 길이·표본율은 그대로다. 로컬
 `output/audio/YYYY-MM-DD.wav` 원본은 배포 묶음용으로 남긴다.
+비트레이트·채널은 **config 의 `tts.embed`** 가 정본이다(기본 64k·모노). 하드코딩하지 않는다 —
+96k 가 코드에 박혀 있던 동안 3분 20초 대본이 호 3.28MB 가 되어 **공개 공유가 거절됐다**
+(2026-08-12 실측). 거절 문구가 크기를 말해 주지 않으므로 발행 전 `tools/check_size.py`(D8)로
+판정한다. 대본이 길어지는 날은 비트레이트를 먼저 내린다.
 변환 명령 (imageio-ffmpeg — SETUP 2절 선택 의존성, 2026-08-12 실측: 12.26MB → 1.79MB):
 ```
 python -c "import imageio_ffmpeg,subprocess,sys;subprocess.check_call([imageio_ffmpeg.get_ffmpeg_exe(),'-y','-loglevel','error','-i',sys.argv[1],'-c:a','aac','-b:a','96k',sys.argv[2]])" output/audio/YYYY-MM-DD.wav output/audio/YYYY-MM-DD.mp4
@@ -336,6 +340,7 @@ python tools/check_tables.py output/web/YYYY-MM-DD.html    # D6 표 판형 (종�
 python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
 python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
 python tools/check_ledger.py                               # D7 원장 정합 — 매달린 참조·유효/대체 충돌·인덱스 신선도 (종료코드 0 필수)
+python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — 상한 초과 시 공개 공유가 거절된다 (종료코드 0 필수, config tts.embed.max_html_mb)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —

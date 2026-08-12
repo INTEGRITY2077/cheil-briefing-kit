@@ -81,6 +81,16 @@
   배포본에 실체 없는 참조만 남고, 대체된 수치가 유효한 최신값으로 방송된다
   (2026-08-12 이슈 #7 실측: 매달린 참조 6건 + F-011 유효/대체 충돌 + 인덱스 08-10 정지).
   미러 + index 재생성은 JSONL 기입과 같은 실행에서 한 동작이다 (배포 정책 A안)
+- D8. 호 크기 게이트 통과 — `python tools/check_size.py <웹판.html>` 종료코드 0.
+  상한의 정본은 config 의 `tts.embed.max_html_mb`(기본 3.0MB — README 의 「호가 3MB
+  안쪽」). 웹판은 오디오를 data URI 로 싣고 base64 는 원본의 4/3 로 부푸니
+  「AAC × 1.34 + 지면」이 곧 호 크기다. 상한을 넘으면 **아티팩트 공개 공유가 거절된다**
+  (2026-08-12 실측: 3분 20초 대본을 AAC 96k 로 실어 호 3.28MB → 거절, 64k 모노로
+  내려 2.14MB → 통과). 이 고장이 눈에 안 보이는 이유는 거절 문구가 크기를 말하지 않기
+  때문이다 — "This version can't be shared publicly. Publish a new version or change
+  the shared version, then try again." 는 버전 이야기만 하고, 그 두 우회로는 둘 다
+  막혀 있다(새 버전도 같은 크기, 공유 버전 콤보박스는 공개 전환 전까지 잠김).
+  E1 을 켜기 **전에** 이 항을 돌린다 — 켠 뒤에 알면 원인을 찾는 데 시간이 걸린다
 - F3. PPTX 전시 슬라이드 노트에 `[EXHIBIT: 문서명|항목명]` 토큰 ≥1, 문서명이 웹판
   `data-doc`과 일치하는가. 라디오 대본에 `[EX: 문서명]` 참조 토큰 3~4개
 - F4. 전시물 계약 게이트 통과 — `python tools/check_exhibits.py <웹판.html>` 종료코드 0.

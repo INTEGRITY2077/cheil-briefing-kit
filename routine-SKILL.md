@@ -158,6 +158,14 @@ SOT 참조는 개념 ID 로 건다.
 배포 묶음에는 오디오 원본 파일(WAV/MP3)을 반드시 첨부한다 — 아티팩트 뷰어는
 iframe sandbox에 allow-downloads가 없어 ⋮ 메뉴의 다운로드 항목 자체가 사라진다
 (2026-08-11 실측). 링크만 보내면 청취자는 저장할 방법이 없다.
+런타임의 `downloads` capability 로도 못 푼다 — 선언하는 순간 플랫폼이 공개 공유를
+거부한다 (deploy 422, 2026-08-12 실측). 허용 확장자에 wav·mp3 도 없다. 공개 배포
+호에는 저장 버튼을 넣지 않는다.
+
+웹판에 싣는 오디오는 **MP4(AAC 96k)** 로 변환해 넣는다 (2026-08-12 확정):
+WAV 를 그대로 data URI 로 실으면 호가 10MB 를 넘어 첫 렌더가 눈에 띄게 느리다.
+같은 음성이 1/4 로 줄고(7.42MB → 2.09MB) 길이·표본율은 그대로다. 로컬
+`output/audio/YYYY-MM-DD.wav` 원본은 배포 묶음용으로 남긴다.
 
 호 마감 규칙 (2026-08-11 실측 실패에서): 한 호를 닫으면 **산출물 인계 보고
 (아티팩트 링크·PPTX·아카이브 경로)를 먼저 완료**하고, 다음 호 작업은 그 다음에
@@ -206,6 +214,15 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 5. **번호가 가장 큰 버전**을 고른다. 시간 표기("6m ago")로 고르지 않는다.
    같은 시각에 여러 버전이 찍힐 수 있다
 6. `General access` 는 건드리지 않는다
+7. **지정이 거절될 수 있다.** "This version can't be shared publicly. Publish a new
+   version or change the shared version, then try again." 가 콤보박스 밑에 뜨면 그
+   버전은 공개 대상이 아니다 — 핀은 옛 버전에 그대로 남는다 (2026-08-12, 두 아티팩트에서
+   재현). 이때 조용히 넘어가지 말고 ⓐ 잠시 뒤 재시도 ⓑ 그래도 거절되면 보고에
+   "핀 이동 실패 — 독자는 이전 버전을 본다" 라고 적는다. 갱신했다고 적지 않는다
+8. 목록의 버전 번호는 **절대 식별자가 아니라 목록 안 위치값**이다 (호마다 20개 창).
+   재발행할 때마다 기존 핀의 번호가 하나씩 내려간다 — 번호가 바뀐 것을 핀이 움직인
+   것으로 읽지 않는다. 판정은 "번호가 가장 큰 것 = 최신" 으로 하고, 콤보박스가 보여주는
+   경과 시간("just now")으로 교차 확인한다
 
 **검증 — 반드시 한다**
 소유자 화면은 언제나 최신을 보여주므로 그것으로 확인했다고 하지 않는다.
@@ -256,9 +273,13 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 
 기계 게이트는 손이 아니라 스크립트로 돌린다 — 발행 직전 필수 실행:
 ```
-python tools/check_tables.py output/web/YYYY-MM-DD.html   # D6 표 판형 (종료코드 0 필수)
-python tools/check_exhibits.py output/web/YYYY-MM-DD.html # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
+python tools/check_tables.py output/web/YYYY-MM-DD.html    # D6 표 판형 (종료코드 0 필수)
+python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
+python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
+python tools/check_formats.py output/web/YYYY-MM-DD.html   # C5 판형 바 — 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
+`check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —
+덱을 만들고도 웹판에 문을 안 달면 독자에겐 없는 것과 같다 (2026-08-11 실측).
 눈으로 훑는 게이트(A·B·C)와 달리 D 계열은 정적 검사가 가능하므로, 가능한 것부터
 스크립트로 옮긴다. 새 반려가 정적으로 판정 가능하면 check_*.py 를 늘려라. 이 체크리스트는
 2026-08-11~12 사용자 반려 전건을 항목화한 것이다 — 같은 지적이 다시 나오면
@@ -277,6 +298,10 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 그대로 보존하고 절대 덮어쓰지 않는다. 발행한 URL을 `output/artifact-url-slides-YYYY-MM-DD.txt`에
 기록하고 **당일 웹판 fmtbar의 프레젠테이션 링크에 당일 덱 URL을** 넣는다.
 아카이브 호의 프레젠테이션 탭은 링크 없는 라벨(PPTX 배포본)로 남긴다.
+**덱 아티팩트에도 발행 직후 Share → Anyone with the link 를 켠다** — 웹판만 켜면
+fmtbar 링크가 남에게 404다 (2026-08-11 실측: 발표판이 private 인 채로 남아
+링크조차 붙지 않았다). 링크를 넣은 뒤 `python tools/check_formats.py <웹판.html>`
+(종료코드 0)로 판정하고 결과를 `eval/YYYY-MM-DD.md` 에 기록한다.
 덱 구성은 **당일 웹판 구성을 미러링해 매일 재구성한다** (2026-08-12 유착 사고에서):
 전일 슬라이드 승계 금지. 상시 자료는 '지난 호 안내' 1장으로만. 표지 헤드라인 = 당일 웹판 헤드라인.
 덱 발행 이력도 `output/artifact-url-slides-*.txt` 가 유일한 소스다.

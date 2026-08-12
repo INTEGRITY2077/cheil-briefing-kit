@@ -142,6 +142,12 @@ JSONL 정본(`output/ledger/`)은 gitignore 대상이라 배포되지 않는다 
 새 일정은 `okf/agenda/` 에 개념으로 만든다.
 
 # 3. EVAL
+**시작 전에 `profiles/<profile>.yaml` 의 `audience` 블록을 읽는다** — 무엇이 뉴스인지는
+거기서 갈린다. 이 브리핑의 독자는 회사의 의사결정자이고, 지면이 답하는 질문은
+「오늘 무슨 일이 있었나」가 아니라 「지금 우리가 어떤 결정 흐름 위에 있고 그것이 바깥
+자료에서 어떻게 보이나」다. 화두 선정은 등급 정렬 **이전에** audience 필터를 먼저 건다
+(insight-guard 4-2절 `audience_filter`) — 등급은 자료가 믿을 만한가이지 독자에게 중요한가가 아니다.
+
 `templates/eval-rubric.md` 로 계산해 `eval/YYYY-MM-DD.md` 에 기록한다.
 - 8점 이상 → 심층. 대본 4블록 + 아티팩트 갱신
 - 3~7점 → 표준. 3블록
@@ -319,7 +325,7 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 
 | 산출물 | style-guard genre | tone-guard | 추가 게이트 |
 |---|---|---|---|
-| 웹판 | report | 적용 | headline-guard(헤드라인), insight-guard(리드) |
+| 웹판 | report | 적용 | headline-guard(헤드라인), insight-guard(**전문 — 축·함의·화두**) |
 | 대본 | broadcast | 적용 | tts-guard(기호→발화, pace) |
 | 슬라이드 | report | 적용 | 독자 언어 게이트 + publish-checklist A4 |
 | 원장(OKF) | 적용 안 함 | 적용 안 함 | — |

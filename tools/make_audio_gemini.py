@@ -13,7 +13,10 @@ Edge TTS 와의 차이: 멀티스피커 한 호출 + 스타일 지시(뉴스 앵
 출력은 24kHz 16bit mono WAV.
 """
 import subprocess as _sp
-import io, os, re, sys, json, struct, base64, urllib.request
+import io, os, sys, json, struct, base64, urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from script_lib import parse_script
 
 MODEL = "gemini-2.5-flash-preview-tts"
 VOICES = {"A": "Kore", "B": "Charon"}   # A 앵커(여) / B 기자(남)
@@ -33,13 +36,6 @@ def load_key():
     return None  # 키 없음 — 호출부가 edge 로 강등한다
     sys.exit("GEMINI_API_KEY 가 없다. briefing-kit/.env 에 GEMINI_API_KEY=... 를 넣어라. "
              "발급: https://aistudio.google.com/apikey")
-
-def parse(path):
-    out = []
-    for raw in io.open(path, encoding="utf-8"):
-        m = re.match(r"^([AB]):\s*(.+)$", raw.strip())
-        if m: out.append((m.group(1), m.group(2)))
-    return out
 
 def wav_header(pcm_len, rate=24000, ch=1, width=2):
     byte_rate = rate * ch * width
@@ -75,7 +71,7 @@ def main():
     dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
         os.path.dirname(src).replace("script", "audio"),
         os.path.splitext(os.path.basename(src))[0] + "-gemini.wav")
-    lines = parse(src)
+    lines = parse_script(src)  # 대본 파싱은 script_lib 가 정본
     if not lines: sys.exit("A:/B: 대사가 없다: " + src)
     dialog = "\n".join(("Anchor: " if sp == "A" else "Reporter: ") + tx for sp, tx in lines)
     # 무료층 안전선: 4000자 넘으면 절반씩 나눠 호출

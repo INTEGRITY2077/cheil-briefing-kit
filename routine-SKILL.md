@@ -330,6 +330,11 @@ fmtbar 링크가 남에게 404다 (2026-08-11 실측: 발표판이 private 인 �
 1. 이 문서를 킷의 `routine-SKILL.md` 로 복사한다 (경로는 원본 유지 — 설치자가 치환한다)
 2. `git add -A && git commit -m "규칙 갱신: <한 줄 요약>" && git push`
 3. push 실패(인증 등)면 조작하지 말고 보고에 "저장소 동기화 실패"라고 남긴다
+routine-SKILL.md 를 레포에 동기화할 때는 「킷 위치」절의 로컬 절대경로를
+반드시 `{{KIT_ROOT}}` 플레이스홀더로 바꿔서 커밋한다 — 원작자 경로가 배포되면
+치환 실패 시 조용한 오작동이 된다 (2026-08-12 검출). 치환은 손으로 하지 않는다:
+`python tools/sync_skill.py <마스터SKILL경로>` 를 킷 루트에서 실행하면 레포의
+routine-SKILL.md 가 재생성되고, 절대경로·홈 경로 흔적이 남으면 종료코드 1 로 실패한다.
 산출물(output/)과 개인 설정은 .gitignore 가 막는다 — 커밋 전 `git status` 로
 .env·config.yaml 이 스테이징에 없는지 확인한다. 있으면 커밋하지 않는다.
 

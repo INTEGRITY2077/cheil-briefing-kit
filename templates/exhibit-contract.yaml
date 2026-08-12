@@ -1,0 +1,57 @@
+# 전시물 마크업 계약 — 단일 정본 (合 v2)
+#
+# 이 파일이 계약의 유일한 정본이다. tools/check_exhibits.py 가 이 값을 읽어 판정하고,
+# templates/exhibit-first.md §2 와 templates/publish-checklist.md F4 는 이 파일을 참조한다.
+# 값을 바꾸면 게이트 판정이 바뀐다 — 원칙 문서(exhibit-first.md §1) 합의 없이 바꾸지 않는다.
+
+# 판(edition) 선언 — 아무 요소의 data-edition 속성으로 인정 (아티팩트 프래그먼트 대응)
+edition:
+  attr: data-edition
+  values: [full, digest]        # digest 면 전시 게이트 면제, 단 section.sec 존재 시 즉시 실패
+
+exhibit:
+  # F4: 필수 data 속성 — 하나라도 비면 실패 (출처 각주 계약)
+  required_data_attrs:
+    - data-doc
+    - data-item
+    - data-unit
+    - data-doc-date
+    - data-src-url
+  # 원문 파일 속성 — 없거나 파일이 실존하지 않으면 실패 (제작反1: 재현은 저장된 원문의 변환)
+  src_file_attr: data-src-file
+  # F4: 필수 자식 요소 — 없으면 실패
+  required_children:
+    - {tag: p, class: ex-head, why: "'이 표에서 볼 것은 하나' 헤드라인 1줄"}
+    - {tag: p, class: ex-note, why: "사실+한계 동일문장 주석 필수"}
+    - {tag: figcaption, class: ex-src, why: "문서명·항목명·단위·URL 각주"}
+  # .ex-head 정형 문구 — 안 따르면 경고 (권고)
+  ex_head_phrase: "볼 것은 하나"
+  # 하이라이트 상한 (독자反3) — 0개 실패, max 초과 실패
+  ex_hl: {min: 1, max: 3}
+  # 소스 도메인 화이트리스트 (제작反3): DART · 회사 공식 IR/보도자료/뉴스룸 · 정부 통계.
+  # 기사·유료 리포트 도메인은 절대 추가하지 않는다 — 링크+2문장만 가능.
+  src_domain_whitelist:
+    - dart.fss.or.kr           # 전자공시
+    - cheil.com                # 제일기획 공식
+    - cheil.co.kr
+    - samsung.com              # 삼성전자 뉴스룸/IR
+    - news.samsung.com
+    - innocean.com             # 이노션 공식
+    - innocean.co.kr
+    - hsad.co.kr               # HSAD 공식
+    - kostat.go.kr             # 정부 통계
+    - kosis.kr
+    - index.go.kr
+
+# 재전시 규칙 (편집反3·제작反5)
+reexhibit:
+  class: reexhibit             # figure.exhibit.reexhibit
+  badge_class: ex-badge        # "○월○일 공시 재전시 — 오늘 신규 아님" 배지, 없으면 실패
+  weekly_max: 2                # 동일 data-doc|item 재전시 주 상한 (오늘 포함)
+  window_days: 6               # 지난 호 스캔 범위: 발행일 - window_days ~ 발행일 전날
+
+# F2: 줄글 상한
+text_limits:
+  news_s_max: 2                # li.news 의 .s 요소 상한 (details 밖 기준) — 초과 실패
+  news_sentences_warn: 2       # li.news details 밖 문장 수 — 초과 경고
+  intro_sentences_warn: 3      # 절 도입 <p> 문장 수 — 초과 경고

@@ -133,6 +133,18 @@
   하이라이트의 질은 `eval/YYYY-MM-DD.md`의 수동 스팟체크(호당 전시물 1개 무작위 →
   원문 대조)로 분리해 기록한다. 출처 각주(`figcaption.ex-src`)에 원문 URL 의무
 
+## I. 인사이트·헤드라인
+- IG1. 인사이트 게이트 통과 — `python tools/check_insight.py <웹판.html>` 종료코드 0.
+  판정 규칙의 정본은 `templates/insight-guard.yaml`·`templates/headline-guard.yaml`,
+  원장은 `okf/facts/`(status: deprecated 제외). issue #15 가 정적 판정 가능하다고 특정한
+  4개만 스크립트가 본다: ① 축(`[data-axis]`) ≥1 ② I2 — 축마다 양쪽(`data-side-a/b`)
+  사실 ≥2·원장 실존 ③ H6 — 헤드라인 자리(h1·h2)와 pull 박스의 단위 붙은 숫자가 원장에서
+  문자열로 찾아짐 ④ I8 — 화두 세 칸(`[data-spine="결론|발견|근거"]`)이 지면에 실림.
+  판정 대상 마크업이 웹판에 없는 항목은 「판정 불가 — 마크업 계약 없음」 경고로
+  통과한다(F5 — 못 재는 것을 재는 척하지 않는다). 그 항목과 나머지 I1~I10·H1~H8 은
+  `eval/YYYY-MM-DD.md` 의 사람 판정으로 기록한다. 축이 0개인 호가 기계 게이트 전부를
+  초록으로 통과한 설치 시험(2026-08-12, issue #15)에서 나온 항목이다
+
 ## E. 배포
 - E1. 게이트 전부 통과 후 Share "Anyone with the link" ON — **그날 발행한 아티팩트 전부에**.
   웹판만 켜고 덱을 두면 fmtbar 링크가 남에게 404다 (2026-08-11 실측: 발표판이

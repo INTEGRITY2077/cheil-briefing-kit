@@ -15,6 +15,20 @@
 
 version: 2
 
+# ─────────────────────────────────────────────
+# 용어 정의 — headline-guard · insight-guard 공통 문안 (두 파일 상단에 동일하게 둔다)
+# ─────────────────────────────────────────────
+terms:
+  헤드라인(축):
+    desc: 각 축 상단의 규명 서술. 그 축에서 무엇을 알아냈는지를 말한다
+    governed_by: headline-guard 5절 형태 규칙 — S1(의문형 금지) 적용 대상
+  화두(h1):
+    desc: 문서 머리(masthead)의 h1. insight-guard 4-2절이 세우는 문서 단위 경향성(화두)의 지면 자리
+    governed_by: insight-guard 4-2절. 축 헤드라인이 아니므로 S1 을 적용하지 않는다 — 의문형 허용
+  조정:
+    source: im-news-editor.yaml 2절 note — 이 조정의 원본
+    rule: 축 헤드라인(규명 서술)은 S1 유지, 문서 화두(h1)와 매거진형 제목은 질문 허용
+
 history:
   - version: 1
     outcome: 실패
@@ -139,6 +153,9 @@ shape:
       name: 의문형
       limit: 0
       why: 답을 아는데 묻는 것은 독자를 시험하는 것이다
+      scope: |
+        축 헤드라인 전용. 문서 화두(h1)와 매거진형 제목에는 적용하지 않는다.
+        상단 용어 정의·im-news-editor.yaml 2절 조정 참조 — 충돌이 아니라 적용 범위가 갈린 것이다.
     - id: S2
       name: 추상 명사 종결
       shape: "~의 재편 / ~에 대한 대응 / ~의 구조"
@@ -172,6 +189,9 @@ masthead:
   h1:
     rule: 제목은 문서의 방법을 한마디로 말한다. 주제를 반복하지 않는다
     max_chars: 20
+    note: |
+      이 h1 이 화두(h1)다 — 상단 용어 정의 참조. 축 헤드라인이 아니므로
+      5절 S1(의문형 금지)을 적용하지 않는다. 의문형 허용 (im-news-editor.yaml 2절 조정).
   lead_block:
     rule: 두괄식. 각 축에서 알아낸 것을 한 줄씩 먼저 놓는다
     content: 헤드라인과 같은 단계(규명). 숫자 나열이 아니다

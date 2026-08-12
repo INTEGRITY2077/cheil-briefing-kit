@@ -353,6 +353,7 @@ python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계
 python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
 python tools/check_ledger.py                               # D7 원장 정합 — 매달린 참조·유효/대체 충돌·인덱스 신선도 (종료코드 0 필수)
 python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — 상한 초과 시 공개 공유가 거절된다 (종료코드 0 필수, config tts.embed.max_html_mb)
+python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —

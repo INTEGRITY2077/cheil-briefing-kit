@@ -24,7 +24,10 @@ USAGE = ("사용법: python tools/make_audio_supertonic.py <대본.md> [출력.w
 
 KIT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_VOICE = os.path.join(KIT, "voices", "anchor-f1f2-30.json")
-SPEED = 1.5
+# 합성 배속 금지 — speed는 음소 길이 예측을 압축해 합성수사("백사십사만")의
+# 음절을 떨어뜨린다 (2026-08-12 실측: 1.5에서 "십사만"으로 씹힘).
+# 기본 속도로 합성하고, 청취 배속은 웹판 플레이어의 −/+ 버튼이 담당한다.
+SPEED = 1.05
 B_VOICE = "M2"   # 2인 대본일 때 기자 역
 
 def parse(path):

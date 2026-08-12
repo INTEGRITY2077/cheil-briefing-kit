@@ -12,8 +12,18 @@
   - 화두(h1)·title 의 의문형은 im-news-editor.yaml 2절 조정에 따른 것 —
     headline-guard S1(의문형 금지)은 축 헤드라인 전용이라 충돌이 아니다.
     용어 정의는 headline-guard·insight-guard 상단 terms 참조: 헤드라인(축)=각 축의 규명 서술, 화두(h1)=문서 머리 h1
+
+  계약 마크업 (issue #16) — 뼈대대로 채우면 게이트 통과가 성립해야 한다
+  - data-edition="full|digest" 최상위 래퍼 선언 — check_exhibits 판(edition) 판정
+  - figure.exhibit + data 5속성 + .ex-head/.ex-note/.ex-src — check_exhibits F1·F2·F4
+    (계약 정본: templates/exhibit-contract.yaml — 이 파일은 견본, 값 판정은 정본이 한다)
+  - section.sec[data-axis][data-side-a][data-side-b] — check_insight IG1 ①·②(I2)
+  - data-spine="결론|발견|근거" 세 칸 — check_insight IG1 ④(I8)
+  - .pullq 겨루는 숫자 — check_insight IG1 ③(H6): 숫자 = 원장(okf/facts) 문자열
 -->
-<title>[[화두 — 의문형]] — 오늘의 제일기획 뉴스</title>
+<!-- 화두는 의문형(「무게중심은 어디로 옮겨가나?」)도, 사실적재형(「폴더블 사전판매 144만대, 역대 최다」)도 된다.
+     사실적재형이면 숫자는 원장 문자열이어야 한다 — check_insight H6 이 h1 의 단위 붙은 숫자를 원장과 대조한다. -->
+<title>[[화두 — 의문형 또는 사실적재형]] — 오늘의 제일기획 뉴스</title>
 <style>
 :root{
   --ground:#f6f5f1; --surface:#ffffff; --ink:#1b1b18; --ink-soft:#5c5b53;
@@ -229,9 +239,34 @@ a{color:inherit;text-underline-offset:2px}
 .triad .tt{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--ink-soft)}
 .triad b{font-size:14px}
 .triad p{font-size:13px;color:var(--ink-soft);line-height:1.6;margin:0;max-width:none}
+
+/* ── 계약 마크업 CSS (issue #16 — 08.12 발행본 역이식, 토큰만 스켈레톤 정본으로 치환:
+     --disp→--serif · --key→--warn-line · --ink3→--ink-soft — D4(check_css_vars) 미정의 변수 방지) ── */
+/* pull 박스 — 겨루는 두 방향의 숫자 전담 (headline-guard 1절 stage 1). H6 판정 자리 */
+.pullq{font-family:var(--serif);font-size:clamp(24px,4.5vw,38px);font-weight:400;line-height:1.4;margin:18px 0 6px;border-left:4px solid var(--warn-line);padding-left:20px;letter-spacing:.01em;max-width:none}
+.pqsrc{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);margin:0 0 26px;padding-left:24px;letter-spacing:.05em}
+/* 전시물 계약 (exhibit-first.md · exhibit-contract.yaml) — check_exhibits F4 판정 자리 */
+.exhibit{margin:22px 0;border:1px solid var(--rule-strong);background:var(--surface);padding:0}
+.exhibit .ex-head{margin:0;padding:12px 16px;font-weight:700;font-size:14px;background:var(--head);border-bottom:1px solid var(--rule);max-width:none}
+.exhibit blockquote{margin:0;padding:14px 18px 8px;border-left:4px solid var(--warn-line)}
+.exhibit blockquote p{margin:0 0 10px;font-size:15px;line-height:1.85}
+.exhibit span.ex-hl{background:var(--calc-bg);box-shadow:inset 0 -2px 0 var(--warn-line)}
+.exhibit td.ex-hl{background:var(--calc-bg)!important;box-shadow:inset 0 0 0 2px var(--warn-line)}
+.exhibit .ex-note{margin:0;padding:10px 16px;font-size:12.5px;line-height:1.7;color:var(--ink-soft);border-top:1px dashed var(--rule);max-width:none}
+.exhibit .ex-src{display:block;padding:8px 16px;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);border-top:1px solid var(--rule);letter-spacing:.03em}
+.exhibit .ex-badge{margin:0;padding:6px 16px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--warn-ink);background:var(--warn-bg)}
+.exhibit .dartview,.exhibit .irview{border:none;margin:0}
+.exhibit .scroll{border:none}
+/* 표 판형 D6 (check_tables) — 3열 이하 표는 fit 필수, 4열 이상은 fit 금지 */
+.scroll table.fit{min-width:0;width:100%}
+.scroll table.fit td:first-child,.scroll table.fit th:first-child{width:38%}
 </style>
 
-<div class="wrap">
+<!-- 판(edition) 선언 — 이 블록의 계약은 check_exhibits 판 판정이 본다 (정본: exhibit-contract.yaml edition 절).
+     full = 절(section.sec) 구성 + 절마다 전시물 >=1 (F1).
+     digest = 단신판 — 전시 게이트 면제, 단 section.sec 이 하나라도 있으면 즉시 실패.
+     아티팩트 프래그먼트라 body 가 없으므로 아무 요소의 data-edition 이면 인정된다 — 최상위 래퍼에 둔다. -->
+<div class="wrap" data-edition="full">
 
   <!-- 슬롯 1 · 제호 — 고정 -->
   <!-- [[연간 주제]] 의 정본은 profiles/cheil.yaml spine.windows 의 id:year 창 annual_theme 필드다.
@@ -245,7 +280,9 @@ a{color:inherit;text-underline-offset:2px}
     <div class="top2">
       <div class="tq">
         <span class="slug2">오늘의 화두</span>
-        <h1>[[화두 — 의문형]]</h1>
+        <!-- 의문형 견본: 「무게중심은 어디로 옮겨가나?」 / 사실적재형 견본: 「폴더블 사전판매 144만대, 역대 최다」.
+             사실적재형의 숫자는 원장 문자열이어야 한다 — H6 이 h1 을 대조한다. -->
+        <h1>[[화두 — 의문형 또는 사실적재형]]</h1>
         <p class="answer2">[[답 — 한 문장]]</p>
         <ul class="gist2">
           <li>[[요지 1]]</li>
@@ -261,17 +298,81 @@ a{color:inherit;text-underline-offset:2px}
         </ol>
       </div>
     </div>
+
+    <!-- 화두 세 칸 — 결론·발견·근거 (insight-guard 4-2절 statement). 이 블록의 계약은 check_insight IG1 ④(I8)가 판정한다.
+         결론(16자 이내 한 절, 접속사로 두 절 잇기 금지)·근거는 비면 실패, 발견만 빈 칸 허용.
+         근거 칸에는 F-ID 를 문자열로 싣는다 — okf/facts/ 실존까지 대조한다(매달린 참조 실패).
+         data-spine 은 텍스트를 직접 감싼 잎 요소에 단다 — 판정기는 첫 닫는 태그까지만 읽는다. -->
+    <div class="triad">
+      <div><span class="tt">결론</span><b data-spine="결론">[[결론 — 견본: 재편이 상반기를 움직였다]]</b></div>
+      <div><span class="tt">발견</span><b data-spine="발견">[[발견 — 예상과 어긋난 하나. 없으면 빈 칸]]</b></div>
+      <div><span class="tt">근거</span><p data-spine="근거">[[견본: F-004 — 상반기 누적 영업이익 · F-024 — 사전판매 기록]]</p></div>
+    </div>
   </header>
 
   <!-- 슬롯 3 · 세 개의 숫자 — 화두를 숫자 셋으로 요약할 수 있을 때만 -->
   <!-- <section> .stats > .stat(.good) × 3 + .note </section> -->
 
-  <!-- 슬롯 4 · SOT 원문 재현 — 매일판의 심장. dartview(공시) / irview(IR PDF) -->
-  <!-- <section> h2 → .dartview(원문 표 + .bg 하이라이트 배지 + 계산열) → .srcline(SOT 링크) → .note(회사 서술 대조) </section> -->
+  <!-- 슬롯 4 · 전시물(figure.exhibit) — 매일판의 심장. SOT 원문 재현은 전시물 계약으로 싣는다.
+       이 블록의 계약은 check_exhibits(F1·F2·F4)가 판정한다 — 값의 정본은 templates/exhibit-contract.yaml.
+       dartview(공시)/irview(IR PDF)는 전시물 *안의* 원문 재현 표 스타일이지 전시물 계약 자체가 아니다 —
+       재현 블록을 figure.exhibit 로 감싸고 .ex-head/.ex-note/.ex-src 를 채운다.
+       전시물은 반드시 절(section.sec) 안에 놓인다 — F1: 절마다 figure.exhibit >=1.
+       완전형 견본은 아래 슬롯 5 축 절 안에 있다 (축이 지면 구성의 원리라 전시물도 축 절에 담긴다). -->
 
-  <!-- 슬롯 5 · 비교/타임라인 — 주제에 따라 .scroll 표 / .tl 타임라인 / .split 좌우 선택 -->
+  <!-- 슬롯 5 · 축 절 — 매일 필수. 지면은 힘겨루기 축으로 구성한다 (insight-guard 10절: 자료 종류·소스별·시간순 금지).
+       이 블록의 계약은 check_insight IG1 ①·②(I2)가 판정한다 — 축 마크업 >=1,
+       data-side-a/b 에 F-ID 각 2건 이상 + okf/facts/ 실존. 축이 서면 하나가 아니라 축마다 이 절을 반복한다.
+       h2 가 「헤드라인(축)」 — 규명 서술, headline-guard S1(의문형 금지)·숫자 금지(pull 박스가 전담) 적용. -->
+  <section class="sec" data-axis="[[축 이름 — 영역 이름만]]" data-side-a="[[견본: F-001, F-004]]" data-side-b="[[견본: F-018, F-024]]">
+    <h2><span class="n">[[NN]]</span>[[축 헤드라인 — 규명 서술. 의문형·숫자 금지, 30자 이내]]</h2>
 
-  <!-- 슬롯 6 · 정반합 — 도구·전략 등 긴장 구도가 있을 때만. .aicmp 비교표 + .triad -->
+    <!-- pull 박스 — 겨루는 두 방향의 숫자를 여기 전부 싣는다 (headline-guard 3절).
+         이 블록의 계약은 check_insight IG1 ③(H6)가 판정한다 — 단위 붙은 숫자·콤마 수는 전부 원장 문자열이어야 한다.
+         파생 계산은 여기 올리지 않는다 — resolve 자리에서 과정과 함께 쓴다. -->
+    <p class="pullq">[[side-a 숫자]] ↔ [[side-b 숫자]]</p>
+    <p class="pqsrc">[[F-ID · 출처 문서명]]</p>
+
+    <p>[[절 도입 — 3문장 이내(F2 권고). 무엇이 예상과 어긋났나(읽기: 합의점/대척점/모순점)]]</p>
+
+    <!-- 전시물 완전형 견본 — 계약 정본: templates/exhibit-contract.yaml, 판정: check_exhibits F4.
+         data 5속성(doc/item/unit/doc-date/src-url)은 하나라도 비면 실패. 아래는 견본값 — 그날 문서의 값으로 교체.
+         data-src-file 은 sources/YYYY-MM-DD/ 에 실존해야 하고, src-url 은 화이트리스트 도메인(DART·공식 IR·정부 통계)만.
+         doc-date 가 과거 호에 이미 전시된 문서면 figure.exhibit.reexhibit + p.ex-badge(「○월○일 공시 재전시 — 오늘 신규 아님」) 필수. -->
+    <figure class="exhibit"
+      data-doc="제일기획 2Q26 실적발표자료"
+      data-item="26년 상반기 경영실적 요약 p.3"
+      data-unit="억원"
+      data-doc-date="2026-07-24"
+      data-src-url="https://www.cheil.com/upload/ir/quarterly/kor/CheilWorldwide_FY26_2Q_KOR_F.pdf"
+      data-src-file="sources/2026-08-12/cheil-2q26-ir-p3.md">
+      <!-- .ex-head — 「…볼 것은 하나: ___」 정형 (안 따르면 경고) -->
+      <p class="ex-head">이 표에서 볼 것은 하나: [[겨루는 지점 한 줄]].</p>
+      <!-- 원문 재현 — dartview/irview/.scroll 표/blockquote 중 원문 판형에 맞는 것.
+           .ex-hl 은 1~3개 — 0개면 실패(하이라이트 없는 재현은 전시물이 아니다), 4개부터 실패.
+           표 판형은 D6: 3열 이하 fit 필수, 4열 이상 fit 금지 (check_tables). -->
+      <div class="scroll"><table>
+        <thead><tr><th>[[항목]]</th><th class="num">[[전년]]</th><th class="num">[[당기]]</th><th class="num">[[증감]]</th></tr></thead>
+        <tbody>
+          <tr><td>[[행]]</td><td class="num">[[값]]</td><td class="num ex-hl">[[겨루는 값]]</td><td class="num">[[값]]</td></tr>
+          <tr><td>[[행]]</td><td class="num">[[값]]</td><td class="num ex-hl">[[겨루는 값]]</td><td class="num">[[값]]</td></tr>
+        </tbody>
+      </table></div>
+      <!-- .ex-note — 사실+한계 동일문장 주석 필수 -->
+      <p class="ex-note">[[사실 서술]] — [[한계: 이 자료로 판단할 수 없는 것]].</p>
+      <!-- figcaption.ex-src — 문서명·항목명·단위·URL 각주 필수 -->
+      <figcaption class="ex-src">[[문서명]] ([[YYYY.MM.DD]]) · 단위 [[단위]] · [[원문 링크]]</figcaption>
+    </figure>
+
+    <!-- 축의 나머지 골격 — insight-guard output.per_axis. 여기는 사람 판정(eval/) 영역 -->
+    <p class="note">규명([[R1 원인/R2 착시/R3 미해소]]) — [[왜 어긋났나. h2 헤드라인과 같은 판정이어야 한다(H3)]]</p>
+    <p class="note">표본 — [[표본 이름과 크기]] · 주장 강도 [[단정/관찰/시사]] (표본 크기는 표면에, 각주로 밀지 않는다)</p>
+  </section>
+
+  <!-- 슬롯 6 · 정반합 — 독립 절이 아니라 축 절 *내부* 구조다 (issue #16 강등).
+       긴장 구도의 대조표(.aicmp)와 정·반·합(.triad)은 해당 축의 section.sec 안에서 전시물 뒤에 쓴다.
+       비교/타임라인(.scroll 표 / .tl / .split)도 같은 자리 — 축을 받치는 보조 판형이지 독립 절이 아니다.
+       독립 section.sec 로 세우면 F1(절당 전시물 >=1)에 걸린다. -->
 
   <!-- 슬롯 7 · 종합 — 제목은 자연어 문장으로. "종합 — [[숫자가 가리키는 것]]" -->
   <!-- <section> h2 → .vgrid2 > .vec(.v1/.v2/.v3) → 마무리 문단 </section> -->

@@ -193,7 +193,7 @@ WAV 그대로 이식으로 강등된다 — 호가 무거워진 사실을 보고
 덮어쓰는 것은 금지 (독자가 받은 링크의 내용이 바뀌면 판형 자체가 무너진다).
 발행 절차 (2026-08-12 순서 확정 — 게이트가 공유보다 먼저다):
 ① 새 파일로 Artifact 발행(새 URL)
-② 게이트 통과 확인 — #5 전 항목 + C5 `python tools/check_formats.py <웹판.html>` 기본(정적) 검사
+② 게이트 통과 확인 — #5 전 항목 + C5 `python tools/check_formats.py <웹판.html> --expect-deck|--no-deck` 기본(정적) 검사. 플래그는 EVAL 판정으로 정한다 — 심층(덱 생산 호)이면 --expect-deck, 아니면 --no-deck. 파일 실존 추론에 맡기지 않는다 (이슈 #5: 덱을 만들고 기록을 빠뜨린 날을 '안 만든 날'로 오독)
 ③ **통과 후에만 아티팩트 페이지에서 Share → Anyone with the link 를 켠다** —
    새 아티팩트는 비공개 기본값이라 이 단계를 빠뜨리면 독자에게 404가 뜬다 (2026-08-12 실측).
    순서 근거: **공유를 켜는 순간 그 버전이 핀으로 잡힌다** (발표판 실측). 공유 ON 이전의
@@ -305,7 +305,7 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 python tools/check_tables.py output/web/YYYY-MM-DD.html    # D6 표 판형 (종료코드 0 필수)
 python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
 python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
-python tools/check_formats.py output/web/YYYY-MM-DD.html   # C5 판형 바 — 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
+python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —
 덱을 만들고도 웹판에 문을 안 달면 독자에겐 없는 것과 같다 (2026-08-11 실측).

@@ -54,8 +54,11 @@ tts:
   engine: supertonic  # 사다리: supertonic → gemini(키 있을 때) → edge
 
   supertonic:
-    voice: ./voices/anchor-f1f2-30.json # [A] 기본(1인). 내장 이름(F1 등)도 가능
-    voice_reporter: M2                  # [B] 2인 대본일 때만
+    # supertonic 은 1인 낭독이 표준이다 (script-radio 화자 구성 절).
+    # 2인 판형은 gemini 엔진 전용 — 여기의 voice_reporter 는 예외 상황
+    # (2인 대본이 실수로 들어온 날) 을 깨지지 않게 받아주는 안전판일 뿐이다.
+    voice: ./voices/anchor-f1f2-30.json # [A] 1인 낭독 보이스. 내장 이름(F1 등)도 가능
+    voice_reporter: M2                  # 안전판 — 표준 아님
     tool: ./tools/make_audio_supertonic.py
 
   edge:

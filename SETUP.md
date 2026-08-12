@@ -205,6 +205,9 @@ GEMINI_API_KEY 만 있으면 된다.
 
 ## 3. 설정 생성
 1. `config.example.yaml` → `config.yaml` 복사 후, 선택한 TTS 엔진과 시각을 반영한다.
+   0-2에서 판별한 워크플로우 유무를 `execution.workflow_available` 에 기록한다 —
+   단계별 모드(`execution.stages`)는 기본값이 이미 업무 성격에 맞게 배분돼 있다
+   (수집·검증=병렬, 집필·게이트·발행=직렬). 손대지 않아도 된다.
    reviewer 는 기본 비움(검토자 없음) — 사전 합의 카드의 고지 항목이다.
 2. gemini 선택 시: `.env.example` → `.env` 복사를 안내하고 **사용자가 직접** 키를 넣게 한다.
 3. 원장(`okf/`)과 수집 커서(`profiles/*.yaml` 의 last_checked)는 **원작자 시드**다 —

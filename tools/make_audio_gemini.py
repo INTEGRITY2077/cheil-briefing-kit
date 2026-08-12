@@ -18,6 +18,13 @@ import io, os, sys, json, struct, base64, urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from script_lib import parse_script
 
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게
+
+USAGE = ("사용법: python tools/make_audio_gemini.py <대본.md> [출력.wav]\n"
+         "예: python tools/make_audio_gemini.py examples/sample-script.md output/audio/smoke-test.wav")
+
 MODEL = "gemini-2.5-flash-preview-tts"
 VOICES = {"A": "Kore", "B": "Charon"}   # A 앵커(여) / B 기자(남)
 STYLE = ("한국 아침 라디오 경제뉴스 낭독이다. 명료하게, 잡담과 감탄사 없이. "
@@ -34,8 +41,6 @@ def load_key():
             if line.strip().startswith("GEMINI_API_KEY="):
                 return line.split("=", 1)[1].strip()
     return None  # 키 없음 — 호출부가 edge 로 강등한다
-    sys.exit("GEMINI_API_KEY 가 없다. briefing-kit/.env 에 GEMINI_API_KEY=... 를 넣어라. "
-             "발급: https://aistudio.google.com/apikey")
 
 def wav_header(pcm_len, rate=24000, ch=1, width=2):
     byte_rate = rate * ch * width
@@ -63,7 +68,21 @@ def call(key, dialog_text):
     part = res["candidates"][0]["content"]["parts"][0]["inlineData"]
     return base64.b64decode(part["data"])
 
+def _fallback_edge(src, dst):
+    """GEMINI_API_KEY 부재 시 edge 로 자동 강등 (config on_missing_key: edge).
+
+    키를 쓰고 싶으면 briefing-kit/.env 에 GEMINI_API_KEY=... 를 넣어라.
+    발급: https://aistudio.google.com/apikey
+    """
+    out = dst.rsplit(".", 1)[0] + ".mp3"
+    print("GEMINI_API_KEY 없음 - edge 로 강등:", out)
+    print("(gemini 를 쓰려면 briefing-kit/.env 에 GEMINI_API_KEY=... — 발급: https://aistudio.google.com/apikey)")
+    tool = os.path.join(os.path.dirname(os.path.abspath(__file__)), "make_audio.py")
+    raise SystemExit(_sp.call([sys.executable, tool, src, out]))
+
 def main():
+    if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
+        sys.exit(USAGE)
     key = load_key()
     if not key:
         _fallback_edge(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else sys.argv[1].replace("script","audio").rsplit(".",1)[0]+".wav")
@@ -91,11 +110,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-def _fallback_edge(src, dst):
-    """GEMINI_API_KEY 부재 시 edge 로 자동 강등 (config on_missing_key: edge)."""
-    out = dst.rsplit(".", 1)[0] + ".mp3"
-    print("GEMINI_API_KEY 없음 - edge 로 강등:", out)
-    tool = __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.abspath(__file__)), "make_audio.py")
-    raise SystemExit(_sp.call([__import__("sys").executable, tool, src, out]))

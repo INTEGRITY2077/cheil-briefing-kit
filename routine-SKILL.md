@@ -23,6 +23,12 @@ description: 제일기획 일일 브리핑 — 생성·배포 시각은 config s
 - **생성 시작(schedule.daily, 기본 07:00)** — 스케줄러 지연으로 실제로는 몇 분 뒤에 뜬다. 0~6절: 수집, 원장, EVAL, 산출물, 게이트, 음성 준비
 - **배포(schedule.publish_at, 기본 07:45)** — 4b절(공유 버전 재지정 + 로그아웃 검증)은 **publish_at 이전에 수행하지 않는다**
 
+공유 시점 우선순위 (2026-08-12 확정 — 한 문장): **아티팩트 발행(새 URL 생성) 자체를
+publish_at 이후로 미루고, 발행 직후 즉시 Share → Anyone with the link 를 켠다.**
+생성 단계(0~6절)는 로컬 산출물(HTML·오디오·대본)과 게이트까지만 하고 발행은 하지 않는다.
+이렇게 하면 '중간 버전 노출 금지'(이 절)와 '발행 직후 공유 ON — 안 켜면 404'(4b ②·E1)가
+충돌하지 않는다: publish_at 이전에는 발행 자체가 없으므로 노출될 중간 버전도 없다.
+
 이유: 생성 도중의 중간 버전이 공유 링크에 걸리면 독자가 미완성본을 본다.
 publish_at 전에 모든 산출이 끝났으면 남은 시간을 재서 대기한 뒤 배포한다
 (`python` 으로 publish_at 까지 남은 초를 계산해 sleep).
@@ -39,7 +45,8 @@ publish_at 이 지났는데도 게이트가 안 끝났으면 배포를 미루고
 산출물은 날짜가 곧 이름이다. 수식어(특별판·확정판·N장·gemini 등) 금지:
 - 웹판: `output/web/YYYY-MM-DD.html`  · 대본: `output/script/YYYY-MM-DD.md`
 - 오디오: `output/audio/YYYY-MM-DD.wav` · 슬라이드: `output/ppt/YYYY-MM-DD.pptx`
-- URL 기록: `output/artifact-url-YYYY-MM-DD.txt` (웹판·슬라이드 두 줄)
+- URL 기록: `output/artifact-url-YYYY-MM-DD.txt` (웹판 1줄) — 슬라이드 URL 은
+  **별도 파일** `output/artifact-url-slides-YYYY-MM-DD.txt` (4c 참조. 두 줄 통합 아님)
 버전은 파일 사본이 아니라 **그 파일을 lint(체크리스트)·eval 통과 후 제자리 갱신**으로
 관리한다. 사본·별칭·아카이브 접두어 파일을 만들지 않는다 — 발행된 아티팩트가
 버전 이력을 이미 보존한다. 어제 파일은 손대지 않는 것으로 아카이브가 된다.
@@ -166,6 +173,15 @@ iframe sandbox에 allow-downloads가 없어 ⋮ 메뉴의 다운로드 항목 �
 WAV 를 그대로 data URI 로 실으면 호가 10MB 를 넘어 첫 렌더가 눈에 띄게 느리다.
 같은 음성이 1/4 로 줄고(7.42MB → 2.09MB) 길이·표본율은 그대로다. 로컬
 `output/audio/YYYY-MM-DD.wav` 원본은 배포 묶음용으로 남긴다.
+변환 명령 (imageio-ffmpeg — SETUP 2절 선택 의존성, 2026-08-12 실측: 12.26MB → 1.79MB):
+```
+python -c "import imageio_ffmpeg,subprocess,sys;subprocess.check_call([imageio_ffmpeg.get_ffmpeg_exe(),'-y','-loglevel','error','-i',sys.argv[1],'-c:a','aac','-b:a','96k',sys.argv[2]])" output/audio/YYYY-MM-DD.wav output/audio/YYYY-MM-DD.mp4
+```
+이식은 변환본으로: `python tools/embed_radio.py <웹판.html> output/audio/YYYY-MM-DD.mp4 <대본.md>`
+(.mp4/.m4a 는 audio/mp4 MIME 으로 실린다). WAV/MP3 를 그대로 넣어도 embed_radio 가
+**같은 변환을 스스로 시도**하므로(2026-08-12 실측: 11.69MB → 1.70MB, audio/mp4 임베드)
+수동 변환 단계를 빼먹어도 D2 는 지켜진다. imageio-ffmpeg 미설치·변환 실패면 경고 후
+WAV 그대로 이식으로 강등된다 — 호가 무거워진 사실을 보고에 남긴다.
 
 호 마감 규칙 (2026-08-11 실측 실패에서): 한 호를 닫으면 **산출물 인계 보고
 (아티팩트 링크·PPTX·아카이브 경로)를 먼저 완료**하고, 다음 호 작업은 그 다음에
@@ -175,10 +191,18 @@ WAV 를 그대로 data URI 로 실으면 호가 10MB 를 넘어 첫 렌더가 �
 배포 URL 규칙 (2026-08-12 확정 — 날짜별 독립 출판): **호마다 새 아티팩트를 발행한다.**
 전날 호의 URL은 건드리지 않는다 — 그 자체가 영구 아카이브다. 어제 URL에 오늘 호를
 덮어쓰는 것은 금지 (독자가 받은 링크의 내용이 바뀌면 판형 자체가 무너진다).
-발행 절차: ① 새 파일로 Artifact 발행(새 URL) ② **발행 직후 아티팩트 페이지에서
-Share → Anyone with the link 를 켠다** — 새 아티팩트는 비공개 기본값이라 이 단계를
-빠뜨리면 독자에게 404가 뜬다 (2026-08-12 실측) ③ 공유 버전이 최신인지 확인
-④ URL을 `output/artifact-url-YYYY-MM-DD.txt`에 기록하고 배포 메시지에 당일 링크를
+발행 절차 (2026-08-12 순서 확정 — 게이트가 공유보다 먼저다):
+① 새 파일로 Artifact 발행(새 URL)
+② 게이트 통과 확인 — #5 전 항목 + C5 `python tools/check_formats.py <웹판.html>` 기본(정적) 검사
+③ **통과 후에만 아티팩트 페이지에서 Share → Anyone with the link 를 켠다** —
+   새 아티팩트는 비공개 기본값이라 이 단계를 빠뜨리면 독자에게 404가 뜬다 (2026-08-12 실측).
+   순서 근거: **공유를 켜는 순간 그 버전이 핀으로 잡힌다** (발표판 실측). 공유 ON 이전의
+   수정은 자유롭고, 이후의 수정은 핀 이동 거절("This version can't be shared publicly...",
+   재현됨·원인 미규명)에 노출된다 — 게이트 통과본을 켜면 핀 이동 경로 자체를 안 밟는다
+④ 로그아웃 검증(아래 「검증」 절) + `python tools/check_formats.py <웹판.html> --check-links`
+   — fmtbar 링크 전부를 익명 GET 으로 실개통 판정한다. 이 플래그는 발행·공유 완료
+   이후에만 돌린다 (기본 실행은 정적 게이트 그대로 — 발행 전 게이트에 네트워크를 섞지 않는다)
+⑤ URL을 `output/artifact-url-YYYY-MM-DD.txt`에 기록하고 배포 메시지에 당일 링크를
 공지한다. 호 마감 = 당일 URL 기록(`output/artifact-url-YYYY-MM-DD.txt`) 완료. 발행된 아티팩트가 곧 영구 아카이브다 — 별도 사본 파일을 만들지 않는다.
 발행 이력은 `output/artifact-url-*.txt` 가 유일한 소스다 — 이 문서에 URL을 적지 않는다.
 
@@ -233,6 +257,11 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 3. 그 URL 을 `Invoke-WebRequest` 로 직접 받아 이번에 넣은 내용이 들어 있는지 문자열로 확인한다
    (예: `class="keypoints"`, 새로 추가한 문장, 고친 수치)
 4. 없으면 4b 를 다시 수행한다
+5. `python tools/check_formats.py output/web/YYYY-MM-DD.html --check-links` (종료코드 0) —
+   fmtbar 의 각 링크(덱 포함)가 익명 독자에게 실제로 열리는지 HTTP 로 판정하고 결과를
+   `eval/YYYY-MM-DD.md` 에 기록한다. 08.11호는 발표판이 private 404 인 채로 정적 게이트를
+   통과했다 — 링크 존재와 링크 개통은 다른 판정이다. 실패("공유 OFF 의심")면 해당
+   아티팩트의 Share 를 켜고 재실행한다
 
 크롬이 연결돼 있지 않거나 로그인이 없으면 **조작하지 말고 보고에 남긴다.**
 "공유 버전이 옛 버전에 고정돼 있음 — 수동 조작 필요" 라고 적는다.
@@ -280,6 +309,10 @@ python tools/check_formats.py output/web/YYYY-MM-DD.html   # C5 판형 바 — �
 ```
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —
 덱을 만들고도 웹판에 문을 안 달면 독자에겐 없는 것과 같다 (2026-08-11 실측).
+덱을 만들지 않은 호(표준/간략 — 4c는 '선택, 심층인 날만')는 당일
+`output/artifact-url-slides-YYYY-MM-DD.txt` 가 없으면 check_formats 가 프레젠테이션
+세그먼트 요구를 자동 면제하므로 종료코드 0 으로 통과한다 (2026-08-12 수리 —
+종전에는 무조건 실패라 '종료코드 0 필수'와 4c '선택'이 서로를 배제했다).
 눈으로 훑는 게이트(A·B·C)와 달리 D 계열은 정적 검사가 가능하므로, 가능한 것부터
 스크립트로 옮긴다. 새 반려가 정적으로 판정 가능하면 check_*.py 를 늘려라. 이 체크리스트는
 2026-08-11~12 사용자 반려 전건을 항목화한 것이다 — 같은 지적이 다시 나오면
@@ -360,14 +393,17 @@ supertonic 실패(미설치·모델 다운로드 불가) 시 **2순위 `gemini`*
 생성 후 검수 없이 audio/ 로 옮기지 않는다: 첫 10초 청취, 수치 대조, 연도 확인.
 
 # 7. 기록
-- `../ledger/broadcast_log.jsonl` 에 오늘 읽은 개념 ID 추가
+- config `paths.ledger` 의 원장(기본값 `output/ledger/broadcast_log.jsonl` — 0절과 동일)에
+  오늘 읽은 개념 ID 추가
 - 방송한 개념에 `broadcast_at` 기록
 - 심층이었으면 `okf/log.md` 에 한 줄
 - `okf/index.md` 재생성
 
 # 8. 정리
 - `stale_after` 지난 개념을 재확인 대상으로 표시
-- 오디오는 `retention.audio_days` 초과분 삭제
+- 오디오는 `retention.audio_days` 초과분 삭제 — **파이썬으로 지운다**
+  (`os.remove`, `Bash(python:*)` 허용 목록 안). 셸 `rm` 은 SETUP 5 허용 목록에
+  없으므로 쓰지 않는다 — 무인 실행에서 권한 프롬프트가 뜬다. 삭제한 파일명을 보고에 남긴다
 
 # 파일을 여럿 다룰 때
 아티팩트 원본과 배포 사본이 따로 있으면 **편집한 파일과 발행한 파일이 같은지 확인한다.**

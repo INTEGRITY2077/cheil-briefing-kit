@@ -15,6 +15,11 @@ import json
 import pathlib
 import datetime
 import re
+import sys
+
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (sys.exit 안내는 stderr)
 
 NOW = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 PRODUCER = "claude/opus-5"
@@ -193,6 +198,12 @@ def main():
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     src, out = pathlib.Path(a.src), pathlib.Path(a.out)
+
+    # 원장 부재를 트레이스백 대신 한국어 안내로 (킷 규약: 안내 후 exit 1)
+    for name in ("facts.jsonl", "agenda.jsonl"):
+        p = src / name
+        if not p.exists():
+            sys.exit(f"원장 파일 없음: {p} — --src 에 facts.jsonl·agenda.jsonl 이 있는 디렉터리를 지정하라")
 
     facts = build_facts(src / "facts.jsonl", out)
     agenda = build_agenda(src / "agenda.jsonl", out)

@@ -1,20 +1,66 @@
 # -*- coding: utf-8 -*-
 """웹판 HTML에 라디오(오디오+대본)를 이식한다.
 
-사용: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3> <대본.md>
+사용: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3|mp4|m4a> <대본.md>
 
+- 웹판 표준 컨테이너는 **MP4(AAC 96k)** 다 (D2·routine 4b, 2026-08-12 확정 —
+  WAV 그대로 실으면 호가 10MB 를 넘는다). **WAV/MP3 입력은 이 도구가 자동 변환한다**:
+  imageio-ffmpeg(선택 의존성, SETUP §2)가 있으면 AAC 96k 로 변환해 audio/mp4 로
+  임베드하고 (2026-08-12 실측: 7.42MB → 2.09MB, 길이·표본율 동일), 없거나 변환이
+  실패하면 경고 후 원본 그대로 임베드로 강등한다 (종료코드 0 유지 — D2 는 경고로 남는다).
+  이미 .mp4/.m4a 면 변환 없이 임베드한다. 변환 산출물은 임시 디렉토리에만 쓰고
+  원본 오디오 파일은 절대 건드리지 않는다.
 - HTML에 플레이어 블록(data:audio URI + 대본 details)이 이미 있으면 교체하고,
   **없으면 <body> 직후에 플레이어 블록을 새로 삽입한다** (뼈대 HTML도 그대로 사용 가능).
-- 플레이어 JS: data:→blob: 전환(⋮ 메뉴 다운로드 활성), 배속 −/+ 버튼(1.0~2.0).
+- 플레이어 JS: data:→blob: 전환(대용량 data URI 의 탐색·재생 안정화 — 다운로드는
+  아티팩트 뷰어 iframe sandbox 에 allow-downloads 가 없어 어차피 불가, D2b 실측),
+  배속 −/+ 버튼(1.0~2.0).
 - 대본: <summary>대본</summary> ... </details> 사이를 대본 md의 A:/B: 줄로 재구성한다.
 - 실패 시 원본을 건드리지 않는다 (전부 검증 후 한 번에 쓴다).
 """
 import base64, io, os, re, sys
 
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from script_lib import parse_script
 
-USAGE = "사용법: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3> <대본.md>"
+USAGE = "사용법: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3|mp4|m4a> <대본.md>"
+
+# 확장자 → MIME (없는 확장자는 audio/mpeg 로 강등)
+AUDIO_MIME = {".wav": "audio/wav", ".mp3": "audio/mpeg",
+              ".mp4": "audio/mp4", ".m4a": "audio/mp4"}
+
+DEGRADE_WARN = "경고: imageio-ffmpeg 없음/변환 실패 — 원본 그대로 임베드, 호 용량 커짐(D2)"
+
+
+def to_aac(src):
+    """WAV/MP3 를 MP4(AAC 96k) 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
+
+    imageio-ffmpeg 는 선택 의존성(SETUP §2, 약 87MB) — ImportError 나 변환 실패
+    (비0 종료·0바이트 출력)면 경고만 내고 None 을 돌려준다 (원본 임베드로 강등).
+    산출물은 임시 디렉토리에만 쓴다 — 원본 오디오는 읽기만 한다.
+    """
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        print(DEGRADE_WARN)
+        return None
+    import subprocess, tempfile
+    exe = imageio_ffmpeg.get_ffmpeg_exe()
+    out = os.path.join(tempfile.mkdtemp(prefix="embed_radio_"), "audio.m4a")
+    try:
+        r = subprocess.run([exe, "-y", "-i", src, "-vn", "-c:a", "aac", "-b:a", "96k", out],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        print(DEGRADE_WARN)
+        return None
+    if r.returncode != 0 or not os.path.exists(out) or os.path.getsize(out) == 0:
+        print(DEGRADE_WARN)
+        return None
+    return out
 
 PLAYER_CSS = """
 <style>
@@ -90,9 +136,17 @@ def main():
     if n != 1:
         sys.exit(f"중단: data:audio 데이터 URI가 {n}개다 (1개여야 한다)")
 
-    # 1) 오디오 교체
-    mime = "audio/wav" if wav_p.lower().endswith(".wav") else "audio/mpeg"
-    b64 = base64.b64encode(open(wav_p, "rb").read()).decode()
+    # 1) 오디오 준비 — WAV/MP3 는 AAC 96k 자동 변환 (D2), 실패 시 원본 강등
+    ext = os.path.splitext(wav_p)[1].lower()
+    audio_src = wav_p
+    if ext in (".wav", ".mp3"):
+        conv = to_aac(wav_p)
+        if conv:
+            audio_src = conv
+            print(f"변환: {os.path.basename(wav_p)} "
+                  f"{os.path.getsize(wav_p)/1048576:.2f}MB → AAC 96k {os.path.getsize(conv)/1048576:.2f}MB")
+    mime = AUDIO_MIME.get(os.path.splitext(audio_src)[1].lower(), "audio/mpeg")
+    b64 = base64.b64encode(open(audio_src, "rb").read()).decode()
     html = re.sub(r'data:audio/[^;]+;base64,[A-Za-z0-9+/=]+',
                   f'data:{mime};base64,' + b64, html, count=1)
 

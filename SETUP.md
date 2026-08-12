@@ -47,8 +47,11 @@
 
 ### 0-5. 사용자에게 묻는 것 (한 번에, 세 가지만)
 1. 설치 위치 (기본값 제안: 사용자 문서 폴더 아래 `briefing-kit`)
-2. TTS 엔진 — `edge`(기본) / `gemini`(본인 키)
-3. 루틴 시각 — 기본 06:57 생성 / 07:45 배포
+2. TTS 엔진 — `supertonic`(기본, 키 불필요) / `gemini`(본인 키, 감정 지시) / `edge`(예비)
+3. 루틴 시각 — **디폴트: 생성 07:00 / 배포 07:45.** 사용자가 원하는 시각을 물어
+   합의한 값을 config.yaml `schedule`(daily 크론·publish_at)에 기록한다. 하드코딩하지
+   않는다 — 이후에도 사용자가 요청하면 config 를 고쳐 재설정한다. 배포 시각은 생성
+   시각보다 최소 30분 뒤를 권한다(게이트·음성 시간)
 
 ## 1. 저장소 받기
 ```
@@ -58,19 +61,20 @@ git이 없으면 zip 다운로드로 대체한다.
 
 ## 2. 의존성
 ```
-python -m pip install edge-tts requests pyyaml
+python -m pip install supertonic soundfile edge-tts requests pyyaml
 ```
 gemini 선택 시 추가로: `python -m pip install google-genai`
+(supertonic 은 최초 실행 때 모델 ~99MB 를 자동 다운로드한다 — 0-4에서 이미 고지)
 
 ## 3. 설정 생성
 1. `config.example.yaml` → `config.yaml` 복사 후, 선택한 TTS 엔진과 시각을 반영한다.
 2. gemini 선택 시: `.env.example` → `.env` 복사를 안내하고 **사용자가 직접** 키를 넣게 한다.
 
 ## 4. 루틴 등록 — 현존 세션 우선
-1. **1차: 세션 크론** — CronCreate로 매일 생성 시각(기본 06:57)에 `routine-SKILL.md` 실행을
+1. **1차: 세션 크론** — CronCreate로 합의된 생성 시각 3분 전(디폴트 06:57)에 `routine-SKILL.md` 실행을
    등록한다. 세션 크론은 7일 자동 만료라는 점을 사용자에게 고지하고, 만료 전 재등록을
    루틴 보고에 포함시킨다.
-2. **예비: 스케줄드 태스크** — scheduled-tasks 도구가 있으면 같은 내용을 +10분 시각(기본 07:07)에
+2. **예비: 스케줄드 태스크** — scheduled-tasks 도구가 있으면 같은 내용을 생성 시각 +7분(디폴트 07:07)에
    새 세션 태스크로도 등록한다. 이중 생산은 routine-SKILL의 0-a 단일 생산자 규칙이 막는다.
 3. `routine-SKILL.md` 안의 킷 절대경로를 이 설치 위치로 치환하고, "발행 이력" URL은 비운다.
 
@@ -94,7 +98,10 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
 `rm` 등 파괴 명령은 의도적으로 제외한다 — 루틴에 삭제 작업이 없다.
 
 ## 6. 시험 실행
-1. TTS 1회: `python tools/make_audio.py examples/sample-script.md output/audio/smoke-test.mp3` — 소리 파일이 0바이트가 아니면 통과
+1. TTS 1회(기본 사다리): `python tools/make_audio_supertonic.py examples/sample-script.md output/audio/smoke-test.wav`
+   — 소리 파일이 0바이트가 아니면 통과. supertonic 실패 시
+   `python tools/make_audio.py examples/sample-script.md output/audio/smoke-test.mp3`(edge)로
+   강등 확인하고 어느 단으로 통과했는지 보고에 남긴다
 2. 루틴을 수동 1회 실행해 `output/web/YYYY-MM-DD.html` 생성 확인
 3. Artifact 발행 → **발행 직후 Share "Anyone with the link" 켜기** (비공개 기본값 = 404 함정)
 4. 발행 전 `templates/publish-checklist.md` A~E 전 항목 실행·기록

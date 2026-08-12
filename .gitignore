@@ -5,3 +5,11 @@ config.yaml
 # 산출물·운영 기록 (각자 로컬에서 생성됨)
 output/
 eval/
+
+# 폴더 골격은 유지
+!eval/.gitkeep
+!output/web/.gitkeep
+!output/script/.gitkeep
+!output/audio/.gitkeep
+!output/ppt/.gitkeep
+!output/ledger/.gitkeep

@@ -23,6 +23,7 @@ paths:
   templates: ./templates
   output: ./output              # 생성물. 배포본에 포함하지 않는다
   archive: ./okf/archive
+  ledger: ./output/ledger/broadcast_log.jsonl   # 방송 원장. 없으면 루틴이 새로 만든다
 
 # 추적 대상. profiles/ 아래 파일명에서 .yaml 을 뺀 값
 profile: cheil
@@ -44,7 +45,7 @@ tts:
   #   sapi       : Windows 내장 음성. 완전 자동이지만 품질이 낮다.
   #   custom     : 외부 명령 호출. 아래 custom 블록을 채운다.
   #   none       : 대본까지만 만들고 끝낸다.
-  engine: gemini      # 키가 없으면 gemini.on_missing_key 에 따라 edge 로 자동 강등
+  engine: edge      # 키가 없으면 gemini.on_missing_key 에 따라 edge 로 자동 강등
 
   edge:
     voice_anchor: ko-KR-SunHiNeural     # [A] 앵커

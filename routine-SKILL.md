@@ -47,7 +47,8 @@ E:\제일기획\리서치\briefing-kit
 # 0. 준비 — 순서대로 읽는다
 1. `config.yaml`
 2. `profiles/<profile>.yaml`
-3. `../ledger/broadcast_log.jsonl` — 여기 있는 개념은 다시 넣지 않는다
+3. 방송 원장 — config의 `paths.ledger`(기본값: `output/ledger/broadcast_log.jsonl`).
+   파일이 없으면 빈 원장으로 새로 만든다. 여기 있는 개념은 다시 넣지 않는다
 4. `okf/index.md`
 5. `okf/agenda/` 전체
 6. `okf/facts/` 중 `status: stable` 인 것
@@ -154,8 +155,8 @@ iframe sandbox에 allow-downloads가 없어 ⋮ 메뉴의 다운로드 항목 �
 Share → Anyone with the link 를 켠다** — 새 아티팩트는 비공개 기본값이라 이 단계를
 빠뜨리면 독자에게 404가 뜬다 (2026-08-12 실측) ③ 공유 버전이 최신인지 확인
 ④ URL을 `output/artifact-url-YYYY-MM-DD.txt`에 기록하고 배포 메시지에 당일 링크를
-공지한다. 호 마감 = `리서치/archive-YYYY-MM-DD-웹판-확정.html` 저장.
-발행 이력: 08.11 = f2e8ea45-cd53-4ab2-a16f-a61fab5b13b0 · 08.12 = d89f9d6f-3065-4304-8a1c-638d658bd3c0
+공지한다. 호 마감 = 당일 URL 기록(`output/artifact-url-YYYY-MM-DD.txt`) 완료. 발행된 아티팩트가 곧 영구 아카이브다 — 별도 사본 파일을 만들지 않는다.
+발행 이력은 `output/artifact-url-*.txt` 가 유일한 소스다 — 이 문서에 URL을 적지 않는다.
 
 기준 시점 규칙 (2026-08-12 실측 실패에서): 리드와 「세 개의 숫자」는 **가장 최신
 실적 자료 기준**으로 정박한다 — 공시(DART) 확정치와 IR 잠정치가 시점이 다르면
@@ -181,8 +182,8 @@ Share → Anyone with the link 를 켠다** — 새 아티팩트는 비공개 �
 claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 
 **지정**
-1. `list_connected_browsers` 로 연결 확인
-2. `output/artifact-url.txt` 의 URL 로 navigate
+1. 내장 브라우저(Claude_Browser)로 연다. claude-in-chrome 폴백일 때만 `list_connected_browsers` 로 연결 확인
+2. `output/artifact-url-YYYY-MM-DD.txt`(당일 파일)의 URL 로 navigate
 3. Share 버튼 클릭 → `Shared version` 콤보박스 클릭
 4. **드롭다운을 screenshot 으로 펼쳐 목록 전체를 읽는다.**
    `find` 가 돌려준 항목 하나로 판단하지 않는다. 발행이 여러 번 있었으면 버전이 여럿 쌓인다
@@ -253,7 +254,7 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 아카이브 호의 프레젠테이션 탭은 링크 없는 라벨(PPTX 배포본)로 남긴다.
 덱 구성은 **당일 웹판 구성을 미러링해 매일 재구성한다** (2026-08-12 유착 사고에서):
 전일 슬라이드 승계 금지. 상시 자료는 '지난 호 안내' 1장으로만. 표지 헤드라인 = 당일 웹판 헤드라인.
-발행 이력: 08.12 덱 = 5cac5793-cd6d-4a64-aa34-7e438b9477fd (08.11 덱은 PPTX 파일로만 보존).
+덱 발행 이력도 `output/artifact-url-slides-*.txt` 가 유일한 소스다.
 브라우저(claude-in-chrome)가 없으면 이 절은 건너뛰고 보고에 남긴다.
 
 인포그래픽 원칙 (2026-08-11 세 번의 실측 실패에서):
@@ -271,7 +272,9 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
   "보도로만 알던" 같은 문구는 편집실 일지다. 기사 언어로: 사실 자체를 서술하고 출처는 srcline으로.
   확인·정정·조회 시각 기록은 원장(facts.jsonl)의 note 필드에만 남긴다
 
-# 5b. 저장소 동기화 — 규칙이 바뀐 날은 반드시 한다
+# 5b. 저장소 동기화 — 규칙이 바뀐 날은 반드시 한다 (원작자·포크 전용)
+**원작 저장소에 쓰기 권한이 없는 설치본, 또는 zip 설치(.git 없음)는 이 절 전체를 건너뛰고
+보고에 "저장소 동기화 해당 없음"이라고 남긴다.** 자기 포크가 있으면 포크로 push 한다.
 이 문서(SKILL)나 `templates/`, `tools/`, `profiles/` 가 바뀌었으면, 루틴 마지막에
 킷 저장소(https://github.com/INTEGRITY2077/cheil-briefing-kit)에 반영한다:
 1. 이 문서를 킷의 `routine-SKILL.md` 로 복사한다 (경로는 원본 유지 — 설치자가 치환한다)
@@ -285,7 +288,9 @@ config의 `tts.engine` 을 본다. 기본값 `edge` 는 완전 자동이다:
 `python tools/make_audio.py output/script/YYYY-MM-DD.md` — 대본을 한 글자 그대로 낭독한다.
 생성 후 파일 크기가 0 이 아닌지, 대사 수만큼 세그먼트가 찍혔는지 로그로 확인한다.
 `sapi` 면 ko-KR 음성을 탐지해 생성하고, 없으면 대본까지만 만들고 그 사실을 남긴다.
-`notebooklm` 은 정기 브리핑에 쓰지 않는다 (아래 함정 참조). 특별판에서 사람이 직접 돌릴 때만.
+`gemini` 면 `python tools/make_audio_gemini.py <대본> <출력.wav>` — `.env`의 GEMINI_API_KEY가
+없으면 config의 `on_missing_key: edge` 강등으로 edge 경로를 탄다.
+`notebooklm` 관련 참조물은 원작자 로컬 전용이다 — 정기 브리핑에 쓰지 않는다.
 
 노트북LM 을 쓸 때의 함정 (2026-08-11 실측):
 - "제일기획"을 "제일기업"으로 발음한 전례. 프롬프트에 발음 지시를 [가장 중요]로 넣는다

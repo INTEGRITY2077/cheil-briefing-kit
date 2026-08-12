@@ -88,7 +88,7 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
 `rm` 등 파괴 명령은 의도적으로 제외한다 — 루틴에 삭제 작업이 없다.
 
 ## 6. 시험 실행
-1. TTS 1회: `python tools/make_audio.py output/script/<견본>.md`
+1. TTS 1회: `python tools/make_audio.py examples/sample-script.md output/audio/smoke-test.mp3` — 소리 파일이 0바이트가 아니면 통과
 2. 루틴을 수동 1회 실행해 `output/web/YYYY-MM-DD.html` 생성 확인
 3. Artifact 발행 → **발행 직후 Share "Anyone with the link" 켜기** (비공개 기본값 = 404 함정)
 4. 발행 전 `templates/publish-checklist.md` A~E 전 항목 실행·기록

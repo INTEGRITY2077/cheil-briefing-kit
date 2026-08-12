@@ -3,13 +3,21 @@
 
 사용: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3|mp4|m4a> <대본.md>
 
-- 웹판 표준 컨테이너는 **MP4(AAC 96k)** 다 (D2·routine 4b, 2026-08-12 확정 —
+- 웹판 표준 컨테이너는 **MP4(AAC)** 다 (D2·routine 4b, 2026-08-12 확정 —
   WAV 그대로 실으면 호가 10MB 를 넘는다). **WAV/MP3 입력은 이 도구가 자동 변환한다**:
-  imageio-ffmpeg(선택 의존성, SETUP §2)가 있으면 AAC 96k 로 변환해 audio/mp4 로
+  imageio-ffmpeg(선택 의존성, SETUP §2)가 있으면 AAC 로 변환해 audio/mp4 로
   임베드하고 (2026-08-12 실측: 7.42MB → 2.09MB, 길이·표본율 동일), 없거나 변환이
   실패하면 경고 후 원본 그대로 임베드로 강등한다 (종료코드 0 유지 — D2 는 경고로 남는다).
   이미 .mp4/.m4a 면 변환 없이 임베드한다. 변환 산출물은 임시 디렉토리에만 쓰고
   원본 오디오 파일은 절대 건드리지 않는다.
+- **비트레이트·채널·호 상한은 config 의 `tts.embed` 가 정본이다** (하드코딩 금지).
+  종전에는 96k 가 코드에 박혀 있어 호 길이가 늘면 조정할 지점이 없었다. config 가
+  없으면 64k/1ch 로 돈다 — 종전 기본값 96k 로 되돌아가지 않는다.
+- 이식 후 호 크기를 재서 `tts.embed.max_html_mb` 를 넘으면 경고한다. 판정(종료코드)은
+  `tools/check_size.py` (D8) 가 한다 — 이 도구는 이식이 일이고 게이트가 아니다.
+  **호를 작게 유지하는 것은 편집 규율이지 공개 공유의 보증이 아니다** — 2026-08-12 에
+  3.28MB 호와 2.14MB 호가 둘 다 공개 전환에서 거절됐고, 실제 사유는 크기가 아니라
+  `{"reason":"unscannable"}`(콘텐츠 스캔 미착수)였다. publish-checklist E5 참조.
 - HTML에 플레이어 블록(data:audio URI + 대본 details)이 이미 있으면 교체하고,
   **없으면 <body> 직후에 플레이어 블록을 새로 삽입한다** (뼈대 HTML도 그대로 사용 가능).
 - 플레이어 JS: data:→blob: 전환(대용량 data URI 의 탐색·재생 안정화 — 다운로드는
@@ -41,6 +49,31 @@ WARN_CONV_FAIL = "경고: AAC 변환 실패(ffmpeg 비정상 종료/빈 출력) 
 # 3줄 견본 AAC 96k ≈ 96KB, edge mp3 ≈ 128KB. 30KB 미만은 정상 합성일 수 없다.
 AUDIO_MIN_BYTES = 30 * 1024
 
+# config 의 tts.embed 기본값 — config 가 없거나 항목이 비었을 때만 쓴다.
+# 96k 로 되돌리지 않는다: 그 값이 호를 3MB 선 위로 올려 공유 거절을 냈다 (2026-08-12).
+EMBED_DEFAULTS = {"bitrate": "64k", "channels": 1, "max_html_mb": 3.0}
+
+
+def load_embed_cfg():
+    """킷 루트의 config.yaml 에서 tts.embed 를 읽는다. 없으면 기본값.
+
+    pyyaml 은 SETUP §2 의 필수 의존성이지만, 없거나 config 가 깨져도 이식 자체는
+    돌아야 하므로 실패는 조용히 기본값으로 흡수한다 (게이트는 check_size 가 따로 건다).
+    """
+    cfg = dict(EMBED_DEFAULTS)
+    kit = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(kit, "config.yaml")
+    try:
+        import yaml
+        with io.open(path, encoding="utf-8") as f:
+            got = ((yaml.safe_load(f) or {}).get("tts") or {}).get("embed") or {}
+        for k in cfg:
+            if got.get(k) is not None:
+                cfg[k] = got[k]
+    except Exception:
+        pass
+    return cfg
+
 
 def validate_audio(path):
     """임베드 전 오디오 판정 — 실패 사유 문자열 또는 None (이슈 #4: 조용한 실패 차단).
@@ -67,9 +100,11 @@ def validate_audio(path):
     return None
 
 
-def to_aac(src):
-    """WAV/MP3 를 MP4(AAC 96k) 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
+def to_aac(src, bitrate, channels):
+    """WAV/MP3 를 MP4(AAC) 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
 
+    비트레이트·채널은 config 의 `tts.embed` 에서 온다 (하드코딩 금지 — 2026-08-12
+    공유 거절의 원인이 코드에 박힌 96k 였다).
     imageio-ffmpeg 는 선택 의존성(SETUP §2, 약 87MB) — ImportError 나 변환 실패
     (비0 종료·0바이트 출력)면 경고만 내고 None 을 돌려준다 (원본 임베드로 강등).
     산출물은 임시 디렉토리에만 쓴다 — 원본 오디오는 읽기만 한다.
@@ -83,7 +118,8 @@ def to_aac(src):
     exe = imageio_ffmpeg.get_ffmpeg_exe()
     out = os.path.join(tempfile.mkdtemp(prefix="embed_radio_"), "audio.m4a")
     try:
-        r = subprocess.run([exe, "-y", "-i", src, "-vn", "-c:a", "aac", "-b:a", "96k", out],
+        r = subprocess.run([exe, "-y", "-i", src, "-vn", "-c:a", "aac",
+                            "-b:a", str(bitrate), "-ac", str(channels), out],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         print(WARN_CONV_FAIL)
@@ -170,15 +206,18 @@ def main():
     if n != 1:
         sys.exit(f"중단: data:audio 데이터 URI가 {n}개다 (1개여야 한다)")
 
-    # 1) 오디오 준비 — WAV/MP3 는 AAC 96k 자동 변환 (D2), 실패 시 원본 강등
+    # 1) 오디오 준비 — WAV/MP3 는 AAC 자동 변환 (D2), 실패 시 원본 강등.
+    #    비트레이트·채널은 config 의 tts.embed 가 정본이다
+    cfg = load_embed_cfg()
     ext = os.path.splitext(wav_p)[1].lower()
     audio_src = wav_p
     if ext in (".wav", ".mp3"):
-        conv = to_aac(wav_p)
+        conv = to_aac(wav_p, cfg["bitrate"], cfg["channels"])
         if conv:
             audio_src = conv
             print(f"변환: {os.path.basename(wav_p)} "
-                  f"{os.path.getsize(wav_p)/1048576:.2f}MB → AAC 96k {os.path.getsize(conv)/1048576:.2f}MB")
+                  f"{os.path.getsize(wav_p)/1048576:.2f}MB → AAC {cfg['bitrate']} "
+                  f"{cfg['channels']}ch {os.path.getsize(conv)/1048576:.2f}MB")
     mime = AUDIO_MIME.get(os.path.splitext(audio_src)[1].lower(), "audio/mpeg")
     b64 = base64.b64encode(open(audio_src, "rb").read()).decode()
     html = re.sub(r'data:audio/[^;]+;base64,[A-Za-z0-9+/=]+',
@@ -198,6 +237,16 @@ def main():
 
     io.open(html_p, "w", encoding="utf-8").write(html)
     print(f"완료: {os.path.basename(html_p)} ← {os.path.basename(wav_p)} ({len(b64)//1024}KB b64), 대사 {len(lines)}줄")
+
+    # 3) 호 크기 고지 — 판정은 tools/check_size.py (D8) 가 한다
+    mb = os.path.getsize(html_p) / 1048576
+    limit = float(cfg["max_html_mb"])
+    if mb > limit:
+        print(f"경고: 호가 {mb:.2f}MB 로 상한 {limit:.2f}MB 를 넘었다 — "
+              f"공개 공유가 거절될 수 있다(2026-08-12 실측). "
+              f"config 의 tts.embed.bitrate 를 내리거나 대본을 줄여라")
+    else:
+        print(f"호 크기 {mb:.2f}MB / 상한 {limit:.2f}MB")
 
 if __name__ == "__main__":
     main()

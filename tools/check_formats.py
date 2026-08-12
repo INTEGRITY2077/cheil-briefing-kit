@@ -56,7 +56,8 @@ for _s in (sys.stdout, sys.stderr):
     if hasattr(_s, "reconfigure"):
         _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
-USAGE = "사용법: python tools/check_formats.py <웹판.html> [--archive] [--check-links] [--title \"호 제목\"]"
+USAGE = ("사용법: python tools/check_formats.py <웹판.html> "
+         "[--expect-deck|--no-deck] [--archive] [--check-links] [--title \"호 제목\"]")
 
 BAR = re.compile(r"""<div[^>]*class\s*=\s*["'][^"']*\bfmtbar\b[^"']*["'][^>]*>(.*?)</div>""", re.S | re.I)
 SEG = re.compile(r"""<(a|span)\b([^>]*\bfseg\b[^>]*)>(.*?)</\1>""", re.S | re.I)
@@ -190,8 +191,11 @@ def check_link_open(label, url, title):
 
 
 def parse_args(argv):
-    """수동 파싱 — --title 은 값을 하나 먹는다. (파일들, archive, check_links, title) 반환."""
-    files, archive, check_links, title = [], False, False, None
+    """수동 파싱 — --title 은 값을 하나 먹는다. (파일들, archive, check_links, title, deck) 반환.
+
+    deck: True(--expect-deck) / False(--no-deck) / None(플래그 없음 — 파일 추론 강등).
+    """
+    files, archive, check_links, title, deck = [], False, False, None, None
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -199,6 +203,10 @@ def parse_args(argv):
             archive = True
         elif a == "--check-links":
             check_links = True
+        elif a == "--expect-deck":
+            deck = True
+        elif a == "--no-deck":
+            deck = False
         elif a == "--title":
             i += 1
             if i >= len(argv):
@@ -209,11 +217,11 @@ def parse_args(argv):
         else:
             files.append(a)
         i += 1
-    return files, archive, check_links, title
+    return files, archive, check_links, title, deck
 
 
 def main():
-    args, archive, check_links, cli_title = parse_args(sys.argv[1:])
+    args, archive, check_links, cli_title, deck_flag = parse_args(sys.argv[1:])
     if not args or not os.path.exists(args[0]):
         sys.exit(USAGE)
     html = io.open(args[0], encoding="utf-8").read()
@@ -226,9 +234,18 @@ def main():
     segs = [(tag.lower(), attrs, text_of(body)) for tag, attrs, body in SEG.findall(bar.group(1))]
     errors, warnings = [], []
 
-    # 덱 요구 조건화: 당일 덱 URL 기록 파일이 있는 날만 프레젠테이션 세그먼트를 요구한다
-    srec = slides_record_path(args[0])
-    deck_expected = bool(srec and os.path.exists(srec))
+    # 덱 요구의 정본은 **의도**다 — 루틴이 EVAL 판정(심층=덱 생산)에 따라
+    # --expect-deck / --no-deck 을 넘긴다 (이슈 #5: 파일 실존 추론은 '덱을 만들고
+    # 기록을 빠뜨린 날'을 '안 만든 날'로 오독해 08.11 사고 재발에 눈을 감는다).
+    # 플래그가 없으면 종전 파일 추론으로 강등하되 그 사실을 출력에 남긴다.
+    if deck_flag is not None:
+        deck_expected = deck_flag
+    else:
+        srec = slides_record_path(args[0])
+        deck_expected = bool(srec and os.path.exists(srec))
+        print("안내: --expect-deck/--no-deck 없음 — 덱 URL 기록 파일 실존으로 강등 추론"
+              f" ({'있음' if deck_expected else '없음'}). 놓친 날과 안 만든 날을 구분하지"
+              " 못하는 판정이니 루틴에서는 플래그를 명시하라 (routine 5)")
 
     min_segs = 2 if deck_expected else 1
     if len(segs) < min_segs:
@@ -243,9 +260,9 @@ def main():
     if not deck:
         if deck_expected:
             errors.append("프레젠테이션 세그먼트가 없다 — 덱을 발행했어도 독자에겐 없는 것과 같다"
-                          f" (덱 URL 기록 실존: {os.path.basename(srec)})")
+                          " (이 호는 덱 생산 호로 판정됨)")
         else:
-            print("안내: 덱 URL 기록 파일이 없어 프레젠테이션 세그먼트 요구를 걸지 않는다"
+            print("안내: 덱 없는 호로 판정 — 프레젠테이션 세그먼트 요구를 걸지 않는다"
                   " (routine 4c — 덱은 심층인 날만)")
 
     links = []  # --check-links 대상: (라벨, URL)

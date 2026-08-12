@@ -33,7 +33,38 @@ USAGE = "사용법: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3
 AUDIO_MIME = {".wav": "audio/wav", ".mp3": "audio/mpeg",
               ".mp4": "audio/mp4", ".m4a": "audio/mp4"}
 
-DEGRADE_WARN = "경고: imageio-ffmpeg 없음/변환 실패 — 원본 그대로 임베드, 호 용량 커짐(D2)"
+# 강등 경고 — 원인을 갈라서 낸다 (이슈 #4: 설치 문제와 입력 문제를 로그로 구분)
+WARN_NO_FFMPEG = "경고: imageio-ffmpeg 미설치 — 원본 그대로 임베드, 호 용량 커짐(D2). SETUP §2 선택 의존성"
+WARN_CONV_FAIL = "경고: AAC 변환 실패(ffmpeg 비정상 종료/빈 출력) — 원본 그대로 임베드, 호 용량 커짐(D2)"
+
+# 오디오 최소 크기 — 빈 파일·토막 파일 차단 (이슈 #4). 실측 최소 정상치:
+# 3줄 견본 AAC 96k ≈ 96KB, edge mp3 ≈ 128KB. 30KB 미만은 정상 합성일 수 없다.
+AUDIO_MIN_BYTES = 30 * 1024
+
+
+def validate_audio(path):
+    """임베드 전 오디오 판정 — 실패 사유 문자열 또는 None (이슈 #4: 조용한 실패 차단).
+
+    ① 크기 하한 ② 컨테이너 헤더 매직(WAV RIFF/WAVE, MP3 ID3·프레임싱크, MP4 ftyp).
+    형식 판정만 한다 — 내용(무음 여부)은 게이트 밖, 발행 전 실청이 담당.
+    """
+    size = os.path.getsize(path)
+    if size < AUDIO_MIN_BYTES:
+        return f"오디오가 {size}바이트 — 최소 {AUDIO_MIN_BYTES//1024}KB 미만은 빈/깨진 합성이다"
+    head = open(path, "rb").read(12)
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".wav":
+        if not (head[:4] == b"RIFF" and head[8:12] == b"WAVE"):
+            return "WAV 헤더(RIFF/WAVE)가 아니다 — 깨진 파일"
+    elif ext == ".mp3":
+        if not (head[:3] == b"ID3" or (head[0] == 0xFF and (head[1] & 0xE0) == 0xE0)):
+            return "MP3 헤더(ID3/프레임싱크)가 아니다 — 깨진 파일"
+    elif ext in (".mp4", ".m4a"):
+        if head[4:8] != b"ftyp":
+            return "MP4 헤더(ftyp)가 아니다 — 깨진 파일"
+    else:
+        return f"지원하지 않는 확장자: {ext} — wav/mp3/mp4/m4a 만 받는다"
+    return None
 
 
 def to_aac(src):
@@ -46,7 +77,7 @@ def to_aac(src):
     try:
         import imageio_ffmpeg
     except ImportError:
-        print(DEGRADE_WARN)
+        print(WARN_NO_FFMPEG)
         return None
     import subprocess, tempfile
     exe = imageio_ffmpeg.get_ffmpeg_exe()
@@ -55,10 +86,10 @@ def to_aac(src):
         r = subprocess.run([exe, "-y", "-i", src, "-vn", "-c:a", "aac", "-b:a", "96k", out],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
-        print(DEGRADE_WARN)
+        print(WARN_CONV_FAIL)
         return None
     if r.returncode != 0 or not os.path.exists(out) or os.path.getsize(out) == 0:
-        print(DEGRADE_WARN)
+        print(WARN_CONV_FAIL)
         return None
     return out
 
@@ -120,6 +151,9 @@ def main():
     for f in (html_p, wav_p, scr_p):
         if not os.path.exists(f):
             sys.exit(f"파일 없음: {f}\n{USAGE}")
+    bad = validate_audio(wav_p)
+    if bad:
+        sys.exit(f"중단: {bad} — HTML 은 건드리지 않았다 ({os.path.basename(wav_p)})")
     html = io.open(html_p, encoding="utf-8").read()
 
     # 0) 플레이어 블록이 없으면 <body> 직후에 삽입한다

@@ -18,9 +18,12 @@
 run_log(output/ledger/run_log.jsonl)의 해당 날짜 항목과 산출물 실존을 대조해
 네 가지 상태를 가른다:
 
-  통과(0)  산출물 실존 — output/web/<날짜>.html 이 있다
-           (run_log 항목이 없으면 경고를 내되 실체가 있으므로 통과)
+  통과(0)  산출물 실존 + 게이트 기록 — output/web/<날짜>.html 이 있고,
+           종료 줄의 gates 필드에 실행한 기계 게이트 목록이 있다
+           (run_log 항목 자체가 없으면 경고를 내되 실체가 있으므로 통과)
   통과(0)  quiet_day — run_log 에 result: quiet_day 항목이 있다
+  실패(1)  게이트 기록 없는 발행 — 산출물은 있는데 해당 날짜 종료 줄의
+           gates 필드가 없거나 비어 있다 (이슈 #18: 게이트를 건너뛴 발행)
   실패(1)  무증거 실행 — run_log 항목은 있는데 산출물이 없고,
            실패로도 기록돼 있지 않다 (돌았다는 기록 vs 실체 불일치)
   실패(1)  기록된 실패 — run_log 가 스스로 실패/중단을 기록했다 (정직하지만 실패)
@@ -30,7 +33,9 @@ run_log.jsonl 한 줄 형식 (루틴 SKILL 「실행 원장」 절이 정본):
   시작 줄  {"event":"start","started_at":ISO8601,"session":...,"mode":"생산|검증|미정"}
   종료 줄  {"event":"end","started_at":시작줄과 동일,"ended_at":ISO8601,
             "mode":"생산|검증|중단","result":"산출|quiet_day|검증만|실패",
-            "artifacts":[...],"reason":실패 사유}
+            "artifacts":[...],"gates":["check_tables:0",...],"reason":실패 사유}
+            gates 는 산출을 낸 실행의 의무 필드다 — 실제로 실행한 기계 게이트
+            목록+종료코드. 없거나 비면 이 스크립트가 발행을 실패로 판정한다
 
 정적 검사라 네트워크 없이 돌릴 수 있다. 실패 시 종료코드 1.
 """
@@ -112,12 +117,27 @@ def main():
             print(f"    {n}행 event={obj.get('event')} mode={obj.get('mode')}"
                   f" result={obj.get('result')} session={obj.get('session')}")
 
-    # ① 실체가 있으면 통과 — 원장 누락은 경고로만 남긴다
+    # ① 실체가 있으면 게이트 기록까지 대조한다 (이슈 #18 — 게이트 미실행 발행 차단)
     if has_artifact:
         if not entries:
+            # 원장 항목 자체가 없으면 종전대로 경고+통과 — 실체가 있고,
+            # 존재하지 않는 종료 줄의 gates 를 판정할 수 없다
             print("경고: 산출물은 있는데 run_log 항목이 없다 — "
                   "루틴이 「실행 원장」 절을 건너뛰었거나 다른 경로로 생산됐다")
-        print("통과: 오늘자 산출물이 실존한다")
+            print("통과: 오늘자 산출물이 실존한다")
+            return 0
+        gated = [(n, o) for n, o in entries
+                 if o.get("event") == "end"
+                 and isinstance(o.get("gates"), list) and o.get("gates")]
+        if not gated:
+            print("실패: 게이트 기록 없는 발행 — 산출물은 있는데 해당 날짜 종료 줄의 "
+                  "gates 필드가 없거나 비어 있다. 기계 게이트를 건너뛴 발행이거나 "
+                  "기록을 빠뜨린 것이다 (이슈 #18). 발행 전 게이트를 돌리고 종료 줄에 "
+                  '"gates":["check_tables:0",...] 형식으로 기록하라')
+            return 1
+        n, o = gated[-1]
+        print(f"통과: 오늘자 산출물이 실존하고 게이트 기록이 있다 "
+              f"({n}행 gates={o['gates']})")
         return 0
 
     # ② quiet_day 로 기록된 날 — 산출물 없음이 정상이다

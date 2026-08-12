@@ -40,7 +40,7 @@ PLAYER_HTML = """<div class="kit-radio">
   var a=document.getElementById('radioA'),v=document.getElementById('spdV');
   var dn=document.getElementById('spdDn'),up=document.getElementById('spdUp');
   if(!a||!v)return;
-  var spd=1.0;
+  var spd=1.3;
   function apply(){a.playbackRate=spd;v.textContent=spd.toFixed(1)+'\\u00d7';}
   function step(d){spd=Math.min(2,Math.max(1,Math.round((spd+d)*10)/10));apply();}
   var srcU=a.getAttribute('src');

@@ -54,6 +54,25 @@ publish_at 이 지났는데도 게이트가 안 끝났으면 배포를 미루고
 `config.yaml`을 먼저 읽는다. 경로·검토자·TTS·보존 정책이 거기 있다.
 아래 지시에 절대경로를 쓰지 않는다. config의 상대경로를 킷 루트에 붙여 쓴다.
 
+# 0-원장. 실행 원장 기록이 첫 동작이다 (2026-08-12 이슈 #9 — 무증거 실행에서)
+config 읽기·0-a 확인보다도 먼저, **루틴이 뜨자마자 첫 동작으로**
+`output/ledger/run_log.jsonl` 에 시작 1줄을 append 한다 (파일·디렉토리 없으면 만든다):
+```
+python -c "import json,os,datetime;p='output/ledger/run_log.jsonl';os.makedirs(os.path.dirname(p),exist_ok=True);open(p,'a',encoding='utf-8').write(json.dumps({'event':'start','started_at':datetime.datetime.now().isoformat(timespec='seconds'),'session':'<scheduled-task|session-cron|manual>','mode':'미정'},ensure_ascii=False)+chr(10))"
+```
+루틴 종료 시(성공이든 실패든) 종료 줄을 append 한다 — 같은 `started_at` 으로 짝을 맞추고
+`ended_at`, `mode`(생산/검증/중단), `result`(산출/quiet_day/검증만/실패), `artifacts`(만든
+파일 목록), 실패면 `reason` 을 채운다. 같은 줄 재기록이 아니라 **종료 줄 append** 다.
+이 두 줄이 없으면 "안 돈 날"과 "돌았는데 빈손인 날"을 가를 방법이 없다 — 이슈 #9 에서
+남은 증거가 scheduled-task 의 lastRunAt 타임스탬프 하나뿐이었다.
+
+**산출물 부재 = 실패다.** 루틴을 어떤 이유로든 끝낼 때 오늘자 산출물
+(`output/web/오늘날짜.html`, 또는 quiet_day 라면 run_log 의 `result: quiet_day` 기록)이
+없으면 성공처럼 끝내지 않는다: 종료 줄에 `result: 실패` 와 `reason` 을 쓰고, 보고에도
+실패 사유를 남긴다. 판정은 손이 아니라 스크립트로 한다 — 종료 직전
+`python tools/check_run.py` (킷 루트에서) 종료코드 0 을 확인하고 결과를 보고에 옮긴다.
+전날 실행의 실체 점검은 `python tools/check_run.py --date <전날>` 로 한다.
+
 # 0-a. 단일 생산자 규칙 — 시작하자마자 확인한다 (2026-08-12 이중 생산 사고에서)
 `output/web/오늘날짜.html` 또는 `output/artifact-url-오늘날짜.txt`가 이미 존재하면
 **오늘자는 이미 다른 세션(수동 작업)에서 발행된 것이다. 생성하지 않는다.**
@@ -165,6 +184,10 @@ SOT 참조는 개념 ID 로 건다.
 판정하므로 질(판형 일치·하이라이트)은 호당 전시물 1개 무작위 스팟체크로 따로 기록한다.
 
 # 4b. 배포 — 공유 버전 재지정과 검증 (config schedule.publish_at 이후에만, 기본 07:45)
+
+**배포의 첫 동작은 로그인 판정이다**: 내장 브라우저에서 `get_page_text` 로 claude.ai
+로그인 여부(ⓐ)를 확인한다 — 세션이 풀려 있으면 공유 설정을 수동 안내로 강등하고
+보고에 "재로그인 필요"를 남긴다. 조용히 지나가지 않는다.
 
 **아티팩트를 갱신한 날에만 수행한다. 갱신하지 않았으면 건너뛴다.**
 **publish_at(기본 07:45) 이전이면 수행하지 않는다. 시간표 절 참조.**
@@ -422,6 +445,8 @@ supertonic 실패(미설치·모델 다운로드 불가) 시 **2순위 `gemini`*
 
 # 보고
 짧게 쓴다.
+- **실행 실체 판정** — `python tools/check_run.py` 종료코드와 요지 (0-원장 절.
+  산출물 부재면 이 보고는 실패 보고다 — 성공처럼 쓰지 않는다)
 - EVAL 점수와 등급
 - 신규 사실 건수, supersede 건수
 - 게이트 결과 (산출물별)

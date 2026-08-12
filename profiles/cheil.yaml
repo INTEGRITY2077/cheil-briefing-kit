@@ -168,6 +168,13 @@ spine:
       close: 반기보고서
       derive_from: 반기 전체
       is_main: true         # 다른 창의 관계를 재는 기준
+    - id: year
+      close: 사업보고서(연간)
+      derive_from: 연간 전체
+      # 연간 주제 — templates/article-skeleton.html:235 kicker 의 [[연간 주제]] 플레이스홀더가
+      # 참조하는 정본(유일한 출처)이다. 이 필드가 비어 있으면 그 칸을 비워 두고,
+      # ranking 상위 축 등 다른 값으로 임의 채움을 금지한다 (issue #15 수리).
+      annual_theme: AI와 광고업
   main_window: half
 
   current:

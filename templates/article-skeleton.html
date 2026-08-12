@@ -9,6 +9,9 @@
   - .dartview 첫 열은 sticky — 모바일 가로 스크롤에서 계정과목이 화면에 남는다
   - 계산해 넣은 열은 반드시 노란(--calc-bg) 배경 + "계산 추가" 표기
   - 헤드라인·리드의 숫자는 ledger 문자열만. 파생값은 본문 계산 자리에서만
+  - 화두(h1)·title 의 의문형은 im-news-editor.yaml 2절 조정에 따른 것 —
+    headline-guard S1(의문형 금지)은 축 헤드라인 전용이라 충돌이 아니다.
+    용어 정의는 headline-guard·insight-guard 상단 terms 참조: 헤드라인(축)=각 축의 규명 서술, 화두(h1)=문서 머리 h1
 -->
 <title>[[화두 — 의문형]] — 오늘의 제일기획 뉴스</title>
 <style>
@@ -231,10 +234,14 @@ a{color:inherit;text-underline-offset:2px}
 <div class="wrap">
 
   <!-- 슬롯 1 · 제호 — 고정 -->
+  <!-- [[연간 주제]] 의 정본은 profiles/cheil.yaml spine.windows 의 id:year 창 annual_theme 필드다.
+       그 필드가 비어 있으면 이 칸을 비워 둔다 — ranking 상위 축 등으로 임의 채움 금지 (issue #15). -->
   <header class="masthead">
     <div class="kicker"><span>오늘의 제일기획 뉴스</span><span>[[YYYY.MM.DD 요일]]</span><span>공개자료 기준</span><span>연간 주제 · [[연간 주제]]</span></div>
 
-    <!-- 슬롯 2 · 화두 좌 / 다가올 일정 우 — 고정. 화두는 의문형, 답은 한 문장 -->
+    <!-- 슬롯 2 · 화두 좌 / 다가올 일정 우 — 고정. 화두는 의문형, 답은 한 문장.
+         이 h1 이 「화두(h1)」다 — 의문형 허용은 im-news-editor.yaml 2절 조정.
+         headline-guard S1(의문형 금지)은 「헤드라인(축)」 전용이라 여기 적용되지 않는다. -->
     <div class="top2">
       <div class="tq">
         <span class="slug2">오늘의 화두</span>

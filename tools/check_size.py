@@ -3,25 +3,39 @@
 
 사용: python tools/check_size.py output/web/YYYY-MM-DD.html
 
-규칙 (2026-08-12 공유 거절에서 나온 것):
+배경 (2026-08-12 공유 거절 추적에서):
   웹판은 오디오를 data URI 로 싣는다. base64 는 원본의 4/3 로 부풀기 때문에
-  「AAC 크기 × 1.34 + 지면」 이 곧 호 크기다. 이 값이 커지면 아티팩트의
-  **공개 공유가 거절된다** — 그런데 플랫폼이 내는 문구는 크기를 말하지 않는다:
+  「AAC 크기 × 1.34 + 지면」 이 곧 호 크기다.
+
+  이 호의 아티팩트는 **공개 전환이 거절됐다.** UI 문구는 이렇게 뜬다:
 
       "This version can't be shared publicly. Publish a new version or
        change the shared version, then try again."
 
-  문구가 버전 이야기만 하므로 원인처럼 보이지 않고, 안내가 준 두 우회로
-  (새 버전 발행 · 공유 버전 변경)는 둘 다 막힌다 — 새 버전도 같은 크기이고,
-  공유 버전 콤보박스는 공개 전환 전까지 잠겨 있다. 그래서 눈으로는 영영
-  안 풀리고, 크기를 내리면 한 번에 풀린다.
+  **이 문구는 원인이 아니다.** 같은 조작의 네트워크 응답을 잡아 보면
+  PATCH /api/frame/perm/<id> → 409 이고 본문은 이렇다:
 
-  실측 (2026-08-12, 3분 20초 대본):
-    AAC 96k → 2.45MB → base64 3,338KB → 호 3.28MB → 공유 거절
-    AAC 64k → 1.59MB → base64 2,166KB → 호 2.14MB → 통과
+      {"error":"frame: public serving requires the served version's
+                content scan to be dispatched (unscannable)",
+       "reason":"unscannable"}
 
-  상한의 정본은 config 의 `tts.embed.max_html_mb` 다 (README 의 「호가 3MB 안쪽」).
-  config 가 없으면 3.0MB 로 본다.
+  즉 공개 서빙은 **콘텐츠 스캔 통과가 전제**이고, 이 호는 스캔이 걸리지 않는다.
+  UI 가 제안하는 두 우회로는 그래서 둘 다 소용이 없다 — 새 버전도 같은 내용이고,
+  공유 버전 콤보박스는 공개 전환 전까지 `disabled` 다(실측).
+
+  **크기는 확정된 원인이 아니다.** 실측은 여기까지다:
+    호 3.28MB (AAC 96k)  → 거절 (reason: unscannable)
+    호 2.14MB (AAC 64k)  → 거절 (같은 문구, 사용자 직접 조작)
+    1KB 순수 HTML 페이지 → 공개 전환 성공
+  크기를 3.28MB→2.14MB 로 내려도 풀리지 않았으므로 「3MB 선」은 반증됐다.
+  남은 유력 후보는 **수 MB짜리 단일 base64 data URI 가 스캐너를 막는 것**이지만,
+  임계값도, data URI 자체가 원인인지도 아직 확정되지 않았다.
+
+  그래서 이 게이트는 **원인 규명이 아니라 예방**이다: 호를 작게 유지하면
+  스캔 가능성이 올라간다는 가정 위에 서 있고, 상한(config 의
+  `tts.embed.max_html_mb`, 기본 3.0MB — README 의 「호가 3MB 안쪽」)은
+  검증된 임계가 아니라 **편집 규율**이다. 통과했다고 공개 공유가 보장되지 않는다 —
+  발행 후 E1·E3(익명 개통 판정)이 여전히 최종 관문이다.
 
 정적 검사라 네트워크 없이 돌릴 수 있다. 상한 초과 시 종료코드 1.
 """
@@ -65,8 +79,9 @@ def main():
         print(f"통과: 상한 대비 {total/limit*100:.0f}%")
         return
 
-    print(f"실패: 호가 상한을 {total - limit:.2f}MB 넘었다 — 이 크기에서 공개 공유가 "
-          f"거절된 전례가 있다(2026-08-12). 거절 문구는 크기를 말해 주지 않는다")
+    print(f"실패: 호가 상한을 {total - limit:.2f}MB 넘었다 — 편집 규율 위반이다. "
+          f"공개 서빙은 콘텐츠 스캔을 통과해야 하고(reason: unscannable), 큰 인라인 "
+          f"base64 가 스캔을 막는 것으로 의심된다 — 임계는 미확정")
     if audio_b64 > 0:
         # 지면을 그대로 두고 상한에 맞추려면 AAC 를 얼마로 내려야 하는지 계산해 준다
         room = max(limit - page, 0.0)

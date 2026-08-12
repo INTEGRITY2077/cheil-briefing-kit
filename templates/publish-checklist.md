@@ -84,13 +84,24 @@
 - D8. 호 크기 게이트 통과 — `python tools/check_size.py <웹판.html>` 종료코드 0.
   상한의 정본은 config 의 `tts.embed.max_html_mb`(기본 3.0MB — README 의 「호가 3MB
   안쪽」). 웹판은 오디오를 data URI 로 싣고 base64 는 원본의 4/3 로 부푸니
-  「AAC × 1.34 + 지면」이 곧 호 크기다. 상한을 넘으면 **아티팩트 공개 공유가 거절된다**
-  (2026-08-12 실측: 3분 20초 대본을 AAC 96k 로 실어 호 3.28MB → 거절, 64k 모노로
-  내려 2.14MB → 통과). 이 고장이 눈에 안 보이는 이유는 거절 문구가 크기를 말하지 않기
-  때문이다 — "This version can't be shared publicly. Publish a new version or change
-  the shared version, then try again." 는 버전 이야기만 하고, 그 두 우회로는 둘 다
-  막혀 있다(새 버전도 같은 크기, 공유 버전 콤보박스는 공개 전환 전까지 잠김).
-  E1 을 켜기 **전에** 이 항을 돌린다 — 켠 뒤에 알면 원인을 찾는 데 시간이 걸린다
+  「AAC × 1.34 + 지면」이 곧 호 크기다.
+  **이 항은 편집 규율이지 공개 공유의 보증이 아니다.** 통과해도 E1 이 막힐 수 있다 —
+  아래 E5 참조. 호를 작게 유지하면 스캔 가능성이 올라간다는 가정 위에 서 있다
+- E5. **공개 전환 거절의 실체는 UI 문구가 아니라 API 응답이다** (2026-08-12 추적).
+  Share → Anyone with the link 이 막히면 화면에는 이렇게 뜬다:
+  "This version can't be shared publicly. Publish a new version or change the shared
+  version, then try again." — **이 문구를 믿고 버전을 만지지 마라.** 헛수고다.
+  같은 조작의 네트워크 응답은 `PATCH /api/frame/perm/<id>` → **409** 이고 본문이 원인을
+  말한다: `{"reason":"unscannable", "error":"…public serving requires the served
+  version's content scan to be dispatched (unscannable)"}`.
+  공개 서빙은 **콘텐츠 스캔 통과가 전제**이고, 스캔이 안 걸리면 버전을 몇 개를 쌓아도
+  안 풀린다. UI 가 제안하는 두 우회로가 소용없는 이유이기도 하다 — 새 버전도 같은
+  내용이고, 공유 버전 콤보박스는 공개 전환 전까지 `disabled` 다.
+  **거절되면 문구를 옮겨 적지 말고 개발자도구 네트워크 탭에서 이 PATCH 의 응답 본문을
+  확인해 보고에 적는다.** 실측 (2026-08-12):
+  호 3.28MB 거절 · 호 2.14MB 거절(같은 문구) · 1KB 순수 HTML 성공.
+  크기를 내려도 풀리지 않았으므로 「3MB 선」은 반증됐고, 수 MB짜리 단일 base64
+  data URI 가 스캐너를 막는다는 의심만 남아 있다 — **원인 미확정**
 - F3. PPTX 전시 슬라이드 노트에 `[EXHIBIT: 문서명|항목명]` 토큰 ≥1, 문서명이 웹판
   `data-doc`과 일치하는가. 라디오 대본에 `[EX: 문서명]` 참조 토큰 3~4개
 - F4. 전시물 계약 게이트 통과 — `python tools/check_exhibits.py <웹판.html>` 종료코드 0.

@@ -209,11 +209,12 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 
 **아티팩트와 대본 둘 다 대상이다. 하나라도 빠뜨리지 않는다.**
 
-| 산출물 | style-guard genre | tone-guard |
-|---|---|---|
-| 아티팩트 | report | 적용 |
-| 대본 | broadcast | 적용 |
-| 원장(OKF) | 적용 안 함 | 적용 안 함 |
+| 산출물 | style-guard genre | tone-guard | 추가 게이트 |
+|---|---|---|---|
+| 웹판 | report | 적용 | headline-guard(헤드라인), insight-guard(리드) |
+| 대본 | broadcast | 적용 | tts-guard(기호→발화, pace) |
+| 슬라이드 | report | 적용 | 독자 언어 게이트 + publish-checklist A4 |
+| 원장(OKF) | 적용 안 함 | 적용 안 함 | — |
 
 `templates/tone-guard.yaml` 과 `templates/style-guard.yaml` 을 읽고
 `templates/eval-rubric.md` 의 게이트 G1~G8 을 각 산출물에 통과시킨다.

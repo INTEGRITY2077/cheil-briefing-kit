@@ -12,8 +12,27 @@
 """
 import asyncio, io, re, sys, os
 
+USAGE = ("사용법: python tools/make_audio.py <대본.md> [출력.mp3]\n"
+         "예: python tools/make_audio.py examples/sample-script.md output/audio/smoke-test.mp3")
+
 VOICES = {"A": "ko-KR-SunHiNeural", "B": "ko-KR-InJoonNeural"}
 RATE = "+50%"         # 1.5배속 — tts-guard pace 절
+
+def load_config_overrides():
+    """킷 루트 config.yaml 의 tts.edge 값이 있으면 VOICES/RATE 를 덮어쓴다. 없으면 조용히 기본값."""
+    global VOICES, RATE
+    cfg = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.yaml")
+    if not os.path.exists(cfg):
+        return
+    try:
+        import yaml
+        c = yaml.safe_load(io.open(cfg, encoding="utf-8")) or {}
+        e = ((c.get("tts") or {}).get("edge") or {})
+        if e.get("voice_anchor"):   VOICES["A"] = e["voice_anchor"]
+        if e.get("voice_reporter"): VOICES["B"] = e["voice_reporter"]
+        if e.get("rate"):           RATE = str(e["rate"])
+    except Exception:
+        pass
 PAUSE_MS = 420        # 화자 전환 간격
 
 def parse(path):
@@ -39,6 +58,9 @@ def silence_mp3(ms):
     return b""
 
 async def main():
+    if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
+        sys.exit(USAGE)
+    load_config_overrides()
     src = sys.argv[1]
     dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
         os.path.dirname(src).replace("script", "audio"),

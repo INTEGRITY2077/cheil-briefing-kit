@@ -12,6 +12,7 @@ Edge TTS 와의 차이: 멀티스피커 한 호출 + 스타일 지시(뉴스 앵
 무료층 한도(분당 요청 수)가 있어 대본이 아주 길면 나눠 호출한다.
 출력은 24kHz 16bit mono WAV.
 """
+import subprocess as _sp
 import io, os, re, sys, json, struct, base64, urllib.request
 
 MODEL = "gemini-2.5-flash-preview-tts"
@@ -29,6 +30,7 @@ def load_key():
         for line in io.open(env, encoding="utf-8"):
             if line.strip().startswith("GEMINI_API_KEY="):
                 return line.split("=", 1)[1].strip()
+    return None  # 키 없음 — 호출부가 edge 로 강등한다
     sys.exit("GEMINI_API_KEY 가 없다. briefing-kit/.env 에 GEMINI_API_KEY=... 를 넣어라. "
              "발급: https://aistudio.google.com/apikey")
 
@@ -67,6 +69,8 @@ def call(key, dialog_text):
 
 def main():
     key = load_key()
+    if not key:
+        _fallback_edge(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else sys.argv[1].replace("script","audio").rsplit(".",1)[0]+".wav")
     src = sys.argv[1]
     dst = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
         os.path.dirname(src).replace("script", "audio"),
@@ -91,3 +95,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def _fallback_edge(src, dst):
+    """GEMINI_API_KEY 부재 시 edge 로 자동 강등 (config on_missing_key: edge)."""
+    out = dst.rsplit(".", 1)[0] + ".mp3"
+    print("GEMINI_API_KEY 없음 - edge 로 강등:", out)
+    tool = __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.abspath(__file__)), "make_audio.py")
+    raise SystemExit(_sp.call([__import__("sys").executable, tool, src, out]))

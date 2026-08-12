@@ -7,7 +7,7 @@ Open Knowledge Format (OKF) 스펙: GoogleCloudPlatform/knowledge-catalog
 계층은 쓰지 않는다. 이 규모에는 과하다.
 
 사용법:
-    python tools/build_bundle.py --src ../ledger --out ./okf
+    python tools/build_bundle.py --src output/ledger --out ./okf
 """
 
 import argparse

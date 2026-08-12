@@ -187,7 +187,7 @@ spine:
           note: 재편의 표면이다. 톱이 아니라 톱의 근거로 쓴다 }
     restated_when: 무관 누적 3건 또는 반기 마감
 
-  log: ../ledger/spine.jsonl
+  log: output/ledger/spine.jsonl
 
 # ─────────────────────────────────────────────
 # EVAL
@@ -245,7 +245,7 @@ script:
 # ledger/broadcast_log.jsonl 에 무엇을 언제 읽었는지 기록한다.
 # 대본을 만들기 전에 이 파일을 먼저 읽는다.
 broadcast:
-  log: ../ledger/broadcast_log.jsonl
+  log: output/ledger/broadcast_log.jsonl
 
   facts:
     max_airings: 1

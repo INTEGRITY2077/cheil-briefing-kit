@@ -58,6 +58,13 @@ Claude가 저장소를 내려받고, 세 가지를 물어본 뒤(설치 위치 �
   Gemini 엔진을 선택한 날만
 - **프레젠테이션**: 웹판 전시물을 그대로 옮긴 슬라이드 + PPTX 보관본
 
+## 지원 OS
+
+Windows · macOS · Linux — Claude Code가 도는 곳이면 어디든. 도구와 의존성은 전부
+크로스플랫폼입니다. **실측 검증은 Windows 11에서 완료**됐고 macOS/Linux는 미실측이니,
+설치 중 막히는 지점이 있으면 이슈로 남겨 주세요. (config의 `sapi` 엔진만 Windows 전용
+옵션이며 기본 사다리에는 포함되지 않습니다.)
+
 ## 주의
 
 - TTS 대본은 발화용 표기(숫자·약어 한글 풀어쓰기)를 씁니다 — `templates/tts-guard.yaml`

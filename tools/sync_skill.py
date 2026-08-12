@@ -5,9 +5,19 @@
 사용: python tools/sync_skill.py <마스터SKILL경로>
 출력: 킷 루트의 routine-SKILL.md (고정)
 
+역방향 판정: python tools/sync_skill.py --verify-installed <설치본경로>
+  "이 파일이 설치본인가"를 판정한다 — 「# 킷 위치」 절 **안에만** {{KIT_ROOT}}
+  가 남아 있는지 본다. 다른 절(예: 저장소 동기화 절)의 정당한 언급은 무시한다.
+  통과(치환 완료) = 종료코드 0, 잔존 = 1. 레포 원본(치환 전 배포본)은 이 명령이
+  1로 끝나는 것이 **정상**이다 — 설치 절차(SETUP 4-3)는 치환을 마친 설치본에만
+  이 명령을 돌린다.
+
 배경 (2026-08-12 검출): 수동 cp 로 동기화하다 원작자 절대경로가 그대로
 배포된 사고. 치환을 스크립트로 강제하고, 결과물에 드라이브 절대경로나
 사용자 홈 경로 흔적이 남으면 실패시킨다. 실패 시 종료코드 1.
+역방향 판정은 이슈 #10 에서: 파일 전체 문자열 검사는 동기화 규칙을 설명하는
+정당한 {{KIT_ROOT}} 언급(당시 375행) 때문에 정상 설치도 항상 실패로 떠서,
+판정 범위를 「# 킷 위치」 절로 좁힌 도구를 설치 게이트로 삼는다.
 """
 import io, os, re, sys
 
@@ -15,7 +25,8 @@ for _s in (sys.stdout, sys.stderr):
     if hasattr(_s, "reconfigure"):
         _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
-USAGE = "사용법: python tools/sync_skill.py <마스터SKILL경로>"
+USAGE = ("사용법: python tools/sync_skill.py <마스터SKILL경로>\n"
+         "       python tools/sync_skill.py --verify-installed <설치본경로>")
 
 HEADING = "# 킷 위치"
 
@@ -64,7 +75,44 @@ def check_leaks(text):
     return leaks
 
 
+def kit_section(lines):
+    """「# 킷 위치」 절 본문(헤딩 다음 줄부터 다음 「# 」 헤딩 전까지)을
+    (시작 줄번호(1기준), 줄 리스트) 로 돌려준다. 절이 없으면 None."""
+    for i, line in enumerate(lines):
+        if line.strip() == HEADING:
+            body = []
+            for j in range(i + 1, len(lines)):
+                if lines[j].startswith("# "):
+                    break
+                body.append(lines[j])
+            return i + 2, body
+    return None
+
+
+def verify_installed(path):
+    """설치본 판정 — 「# 킷 위치」 절 안의 {{KIT_ROOT}} 잔존만 본다.
+    다른 절의 정당한 언급은 무시한다. 잔존 시 exit 1."""
+    lines = io.open(path, encoding="utf-8").read().splitlines()
+    sec = kit_section(lines)
+    if sec is None:
+        sys.exit(f"실패: {path} 에서 「{HEADING}」 절을 찾지 못했다 — 판정 대상이 아니다")
+    start, body = sec
+    hits = [(start + k, ln.strip()) for k, ln in enumerate(body) if "{{KIT_ROOT}}" in ln]
+    if hits:
+        print(f"실패: 「{HEADING}」 절에 {{{{KIT_ROOT}}}} 가 남아 있다 — 치환(SETUP 4-3)이 끝나지 않았다")
+        print("  (레포 원본·치환 전 배포본이면 이 실패가 정상이다 — 설치본에만 이 판정을 돌린다)")
+        for n, ln in hits:
+            print(f"  {n}행: {ln}")
+        sys.exit(1)
+    print(f"통과: {path} — 「{HEADING}」 절에 플레이스홀더 잔존 없음 (설치본 판정)")
+
+
 def main():
+    if len(sys.argv) >= 2 and sys.argv[1] == "--verify-installed":
+        if len(sys.argv) < 3 or not os.path.exists(sys.argv[2]):
+            sys.exit(USAGE)
+        verify_installed(sys.argv[2])
+        return
     if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
         sys.exit(USAGE)
     master = sys.argv[1]

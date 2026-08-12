@@ -126,7 +126,7 @@ retention:
   daily_log_days: 90            # 이후 월 단위로 병합
   script: keep                  # 가볍다
   facts: keep                   # supersede 이력이 자산이다
-  artifact: quarterly_only      # 일일판은 최신 1개만
+  artifact: keep                # 호마다 새 아티팩트 — 날짜별 영구 보존, 덮어쓰기 금지 (routine 4b, 2026-08-12 확정)
 
 maintenance:
   active_concept_target: 50     # 이 수를 넘으면 분기 압축 대상

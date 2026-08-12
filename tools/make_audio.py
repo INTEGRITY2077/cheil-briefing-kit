@@ -12,6 +12,10 @@
 """
 import asyncio, io, sys, os
 
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from script_lib import parse_script
 

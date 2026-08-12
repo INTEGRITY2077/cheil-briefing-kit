@@ -19,8 +19,9 @@ gemini 도구는 키가 없으면 스스로 edge 로 강등하므로 supertonic�
 """
 import io, os, subprocess, sys
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from script_lib import parse_script  # 대본 형식이 바뀌면 script_lib.py 만 고친다

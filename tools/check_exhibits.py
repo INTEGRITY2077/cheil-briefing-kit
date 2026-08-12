@@ -26,8 +26,9 @@ templates/exhibit-contract.yaml — 이 스크립트는 그 값을 읽어 판정
 import io, os, re, sys
 from datetime import date, timedelta
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
 USAGE = "사용법: python tools/check_exhibits.py <웹판.html>"
 

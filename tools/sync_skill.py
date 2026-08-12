@@ -11,8 +11,9 @@
 """
 import io, os, re, sys
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
 USAGE = "사용법: python tools/sync_skill.py <마스터SKILL경로>"
 

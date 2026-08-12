@@ -31,6 +31,9 @@
   공유 켜기만 수동 안내로 강등된다고 표시한다.
 - 내장 브라우저가 없으면 claude-in-chrome(크롬 확장) 여부를 확인하고, 둘 다 없으면
   "발행은 되지만 공유 설정은 매일 수동"이라고 고지한다.
+- 로그인이 확인되면 이렇게 고지한다: "로그인은 이번 한 번이면 됩니다 — 내장 브라우저에
+  세션이 유지되므로, 앞으로 매일의 공유 켜기·버전 고정·검증은 Claude가 이 안에서
+  자동으로 합니다. 사용자의 크롬 브라우저는 건드리지 않습니다." 
 
 ### 0-4. TTS 경로 판별 — 사다리: supertonic → gemini → edge
 - 기본값 **supertonic**(로컬 ONNX, 키·네트워크 불필요, Windows 네이티브 동작 확인):
@@ -63,8 +66,16 @@ git이 없으면 zip 다운로드로 대체한다.
 ```
 python -m pip install supertonic soundfile edge-tts requests pyyaml
 ```
-gemini 선택 시 추가로: `python -m pip install google-genai`
+gemini 선택 시 추가 설치는 없다 — `tools/make_audio_gemini.py` 는 표준 라이브러리
+(urllib)로 REST 를 직접 호출하므로 google-genai 패키지가 필요 없다. `.env` 의
+GEMINI_API_KEY 만 있으면 된다.
 (supertonic 은 최초 실행 때 모델 ~99MB 를 자동 다운로드한다 — 0-4에서 이미 고지)
+
+**선택 의존성 — 웹판 오디오 MP4(AAC 96k) 변환용**: `python -m pip install imageio-ffmpeg`
+(설치 약 87MB, ffmpeg 바이너리 동봉이라 별도 ffmpeg 설치가 필요 없다.
+`tools/embed_radio.py` 가 WAV/MP3 입력을 자동 변환하는 데 쓴다(D2) — 없으면
+경고를 내고 WAV 원본 임베드로 강등되어 호가 10MB 를 넘고 첫 렌더가 느려진다.
+2026-08-12 실측: 12.26MB WAV → 1.79MB MP4, 길이·표본율 동일)
 
 ## 3. 설정 생성
 1. `config.example.yaml` → `config.yaml` 복사 후, 선택한 TTS 엔진과 시각을 반영한다.
@@ -80,7 +91,17 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
    루틴 보고에 포함시킨다.
 2. **예비: 스케줄드 태스크** — scheduled-tasks 도구가 있으면 같은 내용을 생성 시각 +7분(디폴트 07:07)에
    새 세션 태스크로도 등록한다. 이중 생산은 routine-SKILL의 0-a 단일 생산자 규칙이 막는다.
-3. `routine-SKILL.md` 안의 킷 절대경로를 이 설치 위치로 치환하고, "발행 이력" URL은 비운다.
+2b. **운영 구조를 사용자에게 설명한다** (등록 직후, 세 문장으로):
+   ① "지금 이 세션이 루틴의 1차 실행자입니다 — 이 대화를 닫지 않고 두면 매일 같은
+   세션에서 브리핑이 만들어집니다 (규칙·브라우저 로그인을 쥔 채로)."
+   ② "이 세션이 닫혀 있는 날은 예비 태스크가 새 세션으로 대신 만듭니다 — 그때의
+   기억은 대화가 아니라 파일(config·원장·routine-SKILL·CLAUDE.md)로 이어집니다."
+   ③ "어느 쪽이든 그 시각에 이 컴퓨터와 Claude 앱이 켜져 있어야 합니다 — 꺼져 있던
+   날의 호는 건너뛰고, 다음 실행이 원장 커서로 그 기간을 따라잡습니다." 
+3. `routine-SKILL.md`의 「킷 위치」 절에 있는 `{{KIT_ROOT}}` 플레이스홀더를 실제 설치
+   경로(절대경로)로 치환한다. 치환 후 `{{KIT_ROOT}}` 문자열이 파일에 남아 있으면 안 된다.
+   (발행 이력은 `output/artifact-url-*.txt` 파일이 유일한 소스다 — 문서 안에 비우거나
+   채울 URL 블록은 없다.)
 
 ## 5. 무인 실행 권한
 설치 위치의 `.claude/settings.json`에 아래 허용 목록을 만든다 (이 프로젝트에만 적용):
@@ -94,17 +115,27 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
       "Bash(mv:*)", "Bash(mkdir:*)", "Bash(echo:*)", "Bash(cat:*)", "Bash(cd:*)",
       "Bash(git status:*)", "Bash(git add:*)", "Bash(git commit:*)",
       "Bash(git diff:*)", "Bash(git log:*)",
-      "mcp__claude-in-chrome", "mcp__Claude_Browser", "mcp__scheduled-tasks"
+      "mcp__claude-in-chrome", "mcp__Claude_Browser", "mcp__scheduled-tasks",
+      "CronCreate", "CronList",
+      "PowerShell(Invoke-WebRequest:*)"
     ]
   }
 }
 ```
-`rm` 등 파괴 명령은 의도적으로 제외한다 — 루틴에 삭제 작업이 없다.
+`CronCreate`·`CronList` 는 세션 크론 7일 만료 전 재등록(4-1)이 무인으로 돌게 하기 위한
+것이고, `PowerShell(Invoke-WebRequest:*)` 는 4b 배포 검증(공유 링크 실측 다운로드)용이다 —
+빠지면 무인 아침 실행이 권한 프롬프트에서 정지한다. PowerShell 도구가 없는 환경
+(macOS/Linux)이면 이 항목은 무시되고, 검증은 `Bash(python:*)` 로 커버되는
+python urllib 로 대신한다.
+`rm` 등 셸 파괴 명령은 의도적으로 제외한다. 단, 루틴에 삭제가 아예 없는 것은 아니다 —
+루틴 8절의 보존 정리(`retention.audio_days`, 기본 30일 초과 오디오 삭제)가 매달
+`Bash(python:*)` 로 수행된다. 사용자에게 이 삭제 범위(오디오 산출물, 30일 초과분)를
+고지하고 동의를 받는다. 그 외의 파일 삭제는 루틴에 없다.
 `git push` 도 제외한다 — 매일 루틴은 로컬 `output/` 에만 쓰고, 저장소 push 는
 원작자·포크 전용이다. 포크에 밀어 올릴 일이 생기면 그때 사용자가 직접 승인한다.
 사용자에게 고지할 것: 이 목록의 `Bash(python:*)` 는 **설치 위치의 파이썬 실행을 매일
-아침 묻지 않고 승인**한다는 뜻이다. 목록을 만들기 전에 `tools/` 의 파이썬 7개를
-훑어볼 기회를 준다.
+아침 묻지 않고 승인**한다는 뜻이다. 목록을 만들기 전에 `tools/` 의 파이썬 파일 전부를
+(개수는 `ls tools/*.py` 로 그때그때 센다 — 하드코딩하지 않는다) 훑어볼 기회를 준다.
 
 ## 6. 시험 실행
 1. TTS 1회(기본 사다리): `python tools/make_audio_supertonic.py examples/sample-script.md output/audio/smoke-test.wav`
@@ -117,4 +148,6 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
 
 ## 7. 설치 완료 보고
 헬스체크 표 · 설치 위치 · TTS 엔진 · 루틴 등록 내역(크론 ID, 태스크 ID) · 시험 실행 결과 ·
+운영 구조 요약(4절 2b의 세 문장: 이 세션이 1차 실행자 / 닫히면 예비가 파일 승계로 대행 /
+그 시각에 컴퓨터·앱이 켜져 있어야 함) ·
 사용자가 직접 해야 할 남은 일(.env 키 입력, 브라우저 로그인, 첫 공유 확인)을 한 화면으로 보고한다.

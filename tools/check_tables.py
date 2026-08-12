@@ -15,8 +15,9 @@
 """
 import io, os, re, sys
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
 USAGE = "사용법: python tools/check_tables.py <웹판.html>"
 FIT_CSS = "table.fit{min-width:0"
@@ -33,7 +34,8 @@ def main():
         cols = len(re.findall(r"<th[^>]*>", thead.group(1))) if thead else 0
         cap = re.search(r"<caption>(.*?)</caption>", body, re.S)
         name = re.sub(r"<[^>]+>", "", cap.group(1)).strip()[:40] if cap else "(caption 없음)"
-        is_fit = "fit" in attrs
+        # 속성 전체 부분일치("profit" 등 오검출) 방지 — class 속성 안의 단어 단위로만 본다
+        is_fit = bool(re.search(r'class="[^"]*\bfit\b[^"]*"', attrs))
         checked += 1
         if cols == 0:
             errors.append(f"[{name}] thead 첫 행에서 열 수를 못 셌다 — thead 구조 확인")

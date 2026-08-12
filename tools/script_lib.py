@@ -10,8 +10,9 @@ make_audio.py / make_audio_gemini.py / make_audio_supertonic.py / embed_radio.py
 """
 import io, re, sys
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
 USAGE = "사용법: python tools/script_lib.py   (자기시험 — examples/sample-script.md 파싱)"
 

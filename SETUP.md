@@ -89,13 +89,18 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
       "Bash(python:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(cp:*)",
       "Bash(mv:*)", "Bash(mkdir:*)", "Bash(echo:*)", "Bash(cat:*)", "Bash(cd:*)",
       "Bash(git status:*)", "Bash(git add:*)", "Bash(git commit:*)",
-      "Bash(git push:*)", "Bash(git diff:*)", "Bash(git log:*)",
+      "Bash(git diff:*)", "Bash(git log:*)",
       "mcp__claude-in-chrome", "mcp__Claude_Browser", "mcp__scheduled-tasks"
     ]
   }
 }
 ```
 `rm` 등 파괴 명령은 의도적으로 제외한다 — 루틴에 삭제 작업이 없다.
+`git push` 도 제외한다 — 매일 루틴은 로컬 `output/` 에만 쓰고, 저장소 push 는
+원작자·포크 전용이다. 포크에 밀어 올릴 일이 생기면 그때 사용자가 직접 승인한다.
+사용자에게 고지할 것: 이 목록의 `Bash(python:*)` 는 **설치 위치의 파이썬 실행을 매일
+아침 묻지 않고 승인**한다는 뜻이다. 목록을 만들기 전에 `tools/` 의 파이썬 7개를
+훑어볼 기회를 준다.
 
 ## 6. 시험 실행
 1. TTS 1회(기본 사다리): `python tools/make_audio_supertonic.py examples/sample-script.md output/audio/smoke-test.wav`

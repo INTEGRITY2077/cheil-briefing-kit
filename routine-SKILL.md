@@ -104,6 +104,13 @@ SUPERSEDE 는 프로파일의 `supersede.grade_order` 와 `known_chains` 를 따
 등급이 높은 자료가 오면 기존 개념을 `deprecated` 로 바꾸고 양방향 링크를 건다.
 부분 기간과 누적 기간은 서로 대체하지 않는다.
 
+**JSONL 에 쓴 사실은 같은 실행에서 `okf/facts/` 미러 + index 재생성까지가 한 동작이다 —
+`python tools/check_ledger.py` 가 판정한다** (배포 정책 A안, 2026-08-12 이슈 #7 확정).
+JSONL 정본(`output/ledger/`)은 gitignore 대상이라 배포되지 않는다 — 미러를 빠뜨리면
+배포본에는 실체 없는 참조(F-###)만 남고, 대체된 수치가 유효한 최신값으로 방송된다.
+대체(SUPERSEDE)를 수행했으면 대체 대상 파일의 `status: deprecated` + `superseded_by` +
+본문 후속 링크, index 「대체됨」 이동까지가 같은 동작의 일부다.
+
 새 일정은 `okf/agenda/` 에 개념으로 만든다.
 
 # 3. EVAL
@@ -305,6 +312,7 @@ claude-in-chrome 으로 폴백하고, 폴백 사실을 보고에 남긴다.
 python tools/check_tables.py output/web/YYYY-MM-DD.html    # D6 표 판형 (종료코드 0 필수)
 python tools/check_exhibits.py output/web/YYYY-MM-DD.html  # F1~F4 전시물 계약 (종료코드 0 필수, templates/exhibit-first.md 참조)
 python tools/check_css_vars.py output/web/YYYY-MM-DD.html  # D4 미정의 CSS 변수 (종료코드 0 필수)
+python tools/check_ledger.py                               # D7 원장 정합 — 매달린 참조·유효/대체 충돌·인덱스 신선도 (종료코드 0 필수)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 ```
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —
@@ -398,6 +406,9 @@ supertonic 실패(미설치·모델 다운로드 불가) 시 **2순위 `gemini`*
 - 방송한 개념에 `broadcast_at` 기록
 - 심층이었으면 `okf/log.md` 에 한 줄
 - `okf/index.md` 재생성
+- `python tools/check_ledger.py` 종료코드 0 확인 (D7 원장 정합 — 매달린 참조 0건,
+  deprecated 가 index 「유효」에 없음, 인덱스 신선도). 실패면 2절 미러 누락이다 —
+  JSONL 에만 쓰고 끝낸 실행은 여기서 걸린다 (2026-08-12 이슈 #7)
 
 # 8. 정리
 - `stale_after` 지난 개념을 재확인 대상으로 표시

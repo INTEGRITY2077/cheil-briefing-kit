@@ -73,6 +73,14 @@
   3열 이하 표에 일괄 min-width 를 물리면 남는 폭이 전부 1열로 몰려 다음 열이 화면 밖으로
   밀린다(2026-08-12 모바일). 좁은 표는 fit(화면 폭 맞춤), 4열 이상은 스크롤 판형 — 눈이 아니라
   스크립트가 판정한다
+- D7. 원장 정합 게이트 통과 — `python tools/check_ledger.py` 종료코드 0.
+  ① okf/**·profiles/** 가 참조하는 F-### 개념이 전부 `okf/facts/` 에 실존(매달린 참조 0건)
+  ② `status: deprecated` 인 개념이 index 「사실 — 유효」에 남아 있지 않음
+  ③ index `generated.at` 이 facts 최신 파일·log.md 최신 항목보다 새것.
+  JSONL 원장(`output/ledger/` — gitignore 대상)에만 쓰고 `okf/` 미러를 빠뜨리면
+  배포본에 실체 없는 참조만 남고, 대체된 수치가 유효한 최신값으로 방송된다
+  (2026-08-12 이슈 #7 실측: 매달린 참조 6건 + F-011 유효/대체 충돌 + 인덱스 08-10 정지).
+  미러 + index 재생성은 JSONL 기입과 같은 실행에서 한 동작이다 (배포 정책 A안)
 - F3. PPTX 전시 슬라이드 노트에 `[EXHIBIT: 문서명|항목명]` 토큰 ≥1, 문서명이 웹판
   `data-doc`과 일치하는가. 라디오 대본에 `[EX: 문서명]` 참조 토큰 3~4개
 - F4. 전시물 계약 게이트 통과 — `python tools/check_exhibits.py <웹판.html>` 종료코드 0.

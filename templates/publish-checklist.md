@@ -43,11 +43,16 @@
 
 ## D. 기술
 - D1. 표: thead·1열에 rowspan 0건, 표 min-width 지정, 모바일 폭에서 1열 고정 확인
-- D2. 오디오: data:→blob 전환 코드 유지, 배속 −/+ 버튼 동작. **아티팩트 안에서는
-  다운로드가 안 된다** — 뷰어 iframe 에 `allow-downloads` 가 없어 브라우저가 막는다
-  (2026-08-11 실측, sandbox="allow-scripts allow-same-origin allow-forms").
-  blob 전환은 ⋮ 메뉴에 항목을 띄우기 위한 것이고 저장은 별개다. 오디오가 필요한
-  독자에게는 `output/audio/YYYY-MM-DD.wav` 를 배포 묶음으로 보낸다 (E4)
+- D2. 오디오: 컨테이너는 **MP4(AAC)** 로 넣는다. data:→blob 전환 코드 유지, 배속
+  −/+ 버튼 동작. WAV 를 그대로 실으면 호가 10MB 를 넘어 첫 렌더가 눈에 띄게 느리다 —
+  같은 음성이 AAC 96k 로는 1/4 이다 (2026-08-12 실측: 7.42MB → 2.09MB, 길이·표본율 동일).
+- D2b. **공개 배포 호에서는 아티팩트 안 다운로드를 포기한다.** 세 겹으로 막혀 있다
+  (2026-08-11~12 실측): ① 뷰어 iframe 이 `sandbox="allow-scripts allow-same-origin
+  allow-forms"` 라 `allow-downloads` 가 없다 ② 런타임의 `downloads` capability 를 쓰면
+  플랫폼이 **공개 공유 자체를 거부**한다(deploy 422: "artifacts that use the downloads
+  capability can't be shared publicly") ③ 그 capability 의 허용 확장자에 wav·mp3 가
+  없다(gif png jpg jpeg webp mp4 webm txt json md). 그래서 저장 버튼은 넣지 않고,
+  오디오가 필요한 독자에게는 `output/audio/YYYY-MM-DD.wav` 를 배포 묶음으로 보낸다 (E4)
 - D3. 셀 줄바꿈 3줄 이하(모바일 스크린샷으로 확인)
 - D4. 미정의 CSS 변수 게이트 통과 — `python tools/check_css_vars.py <웹판.html>`
   종료코드 0. var()가 참조하는 변수가 전부 정의돼 있어야 한다. 미정의 변수는 선언

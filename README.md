@@ -49,6 +49,7 @@ Claude가 저장소를 내려받고, 세 가지를 물어본 뒤(설치 위치 �
 | `examples/` | 설치 시험용 견본 대본 |
 | `config.example.yaml` | 설정 견본 — 복사해서 `config.yaml`로 (엔진·시각·경로가 여기 있습니다) |
 | `.env.example` | (선택) 본인 Gemini API 키 — 없어도 전체가 동작합니다 |
+| `THIRD-PARTY.md` | 의존성·모델 가중치 라이선스 목록 (supertonic MIT · 모델 OpenRAIL-M · edge-tts LGPL 등) |
 
 ## 산출물
 
@@ -70,4 +71,7 @@ Windows · macOS · Linux — Claude Code가 도는 곳이면 어디든. 도구�
 - TTS 대본은 발화용 표기(숫자·약어 한글 풀어쓰기)를 씁니다 — `templates/tts-guard.yaml`
 - 이 킷이 만드는 문서는 전부 공개자료 기반이며 투자 조언이 아닙니다.
 
-MIT License
+## 라이선스
+
+이 킷은 MIT입니다. 사용하는 오픈소스 의존성과 Supertonic 모델 가중치(OpenRAIL-M)의
+라이선스는 `THIRD-PARTY.md`에 정리돼 있습니다.

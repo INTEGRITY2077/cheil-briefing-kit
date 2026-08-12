@@ -3,16 +3,18 @@
 config.yaml
 
 # 산출물·운영 기록 (각자 로컬에서 생성됨)
-output/
-eval/
+output/**
+eval/**
 
-# 폴더 골격은 유지
-!eval/.gitkeep
-!output/web/.gitkeep
-!output/script/.gitkeep
-!output/audio/.gitkeep
-!output/ppt/.gitkeep
-!output/ledger/.gitkeep
+# 폴더 골격은 유지 — 디렉터리를 먼저 되살려야 git 이 그 아래로 내려간다.
+# (`output/` 처럼 디렉터리째 제외하면 하위의 !예외가 전부 무효가 된다)
+!output/**/
+!eval/**/
+!**/.gitkeep
 
 # 호별 원문 저장소(전시물 원본) — 호 콘텐츠와 함께 로컬 전용
 sources/
+
+# 파이썬 부산물 (tools/ 를 돌리면 생긴다)
+__pycache__/
+*.py[cod]

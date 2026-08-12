@@ -11,6 +11,9 @@
 """
 import base64, io, os, re, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from script_lib import parse_script
+
 USAGE = "사용법: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3> <대본.md>"
 
 PLAYER_CSS = """
@@ -95,11 +98,9 @@ def main():
 
     # 2) 대본 교체
     lines = []
-    for raw in io.open(scr_p, encoding="utf-8"):
-        m = re.match(r'^([AB]):\s*(.+)$', raw.strip())
-        if m:
-            cls, who = ('ra', '앵커') if m.group(1) == 'A' else ('rb', '기자')
-            lines.append(f'<div class="rl {cls}"><i>{who}</i><p>{m.group(2)}</p></div>')
+    for sp, text in parse_script(scr_p):  # 대본 파싱은 script_lib 가 정본
+        cls, who = ('ra', '앵커') if sp == 'A' else ('rb', '기자')
+        lines.append(f'<div class="rl {cls}"><i>{who}</i><p>{text}</p></div>')
     if not lines:
         sys.exit("중단: 대본에 A:/B: 줄이 없다")
     pat = re.compile(r'(<summary>대본</summary>).*?(</details>)', re.S)

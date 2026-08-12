@@ -43,21 +43,11 @@
 
 ## 2. 마크업 계약
 
-```html
-<body data-edition="full|digest">
-<section class="sec">                          <!-- 절은 이 태그로만 -->
-<figure class="exhibit" data-doc="문서명" data-item="항목명"
-        data-unit="단위" data-doc-date="YYYY-MM-DD"
-        data-src-url="원문URL" data-src-file="sources/…">
-  <p class="ex-head">이 표에서 볼 것은 하나: ___</p>
-  <table>… <td class="ex-hl">…</td> …</table>   <!-- .ex-hl ≤3 -->
-  <p class="ex-note">주석(사실+한계 동일문장)</p> <!-- ≥1 -->
-  <figcaption class="ex-src">문서명·항목명·단위·URL</figcaption>
-</figure>
-<!-- 재전시: figure.exhibit.reexhibit + <p class="ex-badge">○월○일 공시 재전시 — 오늘 신규 아님</p> -->
-<li class="news"><span class="s fact">…</span><span class="s note">…</span>
-  <details class="ctx">…</details></li>
-```
+**정본: `templates/exhibit-contract.yaml`** — 필수 data 속성·필수 자식 요소·상한·
+화이트리스트·재전시 규칙의 구체 값은 전부 거기서 읽는다(check_exhibits.py 도 동일).
+요지: `figure.exhibit`(data 속성 + `.ex-head`/`.ex-hl`/`.ex-note`/`figcaption.ex-src`),
+절은 `section.sec`, 뉴스는 `li.news`의 `.s`+접힌 `details.ctx`, 재전시는
+`.reexhibit`+`.ex-badge`, 판 선언은 `data-edition="full|digest"`.
 
 PPTX: 전시 슬라이드 노트에 `[EXHIBIT: 문서명|항목명]` 토큰.
 라디오 대본: `[EX: 문서명]` 참조 토큰 3~4개.

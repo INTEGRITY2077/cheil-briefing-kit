@@ -49,7 +49,7 @@ Claude가 저장소를 내려받고, 세 가지를 물어본 뒤(설치 위치 �
 | `tools/` | TTS 사다리(`make_audio_supertonic.py` → `make_audio_gemini.py` → `make_audio.py`), 오디오 이식(`embed_radio.py`), 자동 게이트(`check_tables.py`·`check_exhibits.py`·`check_css_vars.py`·`check_formats.py`) |
 | `voices/` | 확정 보이스 — F1+F2 블렌드 스타일 벡터 (매일 같은 목소리 보장) |
 | `templates/` | 발행 전 체크리스트(A~F), 전시물 우선 원칙, 대본 골격, 톤·스타일·TTS 게이트 |
-| `profiles/`, `okf/` | 소스 프로파일과 지식 원장(전부 공개자료 기반) |
+| `profiles/`, `okf/` | 소스 프로파일과 지식 원장 — **원작자 시드**(공개자료 기반). 설치 후 첫 실행부터 루틴이 따라잡아 갱신하며 stale 규칙이 세대교체 |
 | `examples/` | 설치 시험용 견본 대본 |
 | `config.example.yaml` | 설정 견본 — 복사해서 `config.yaml`로 (엔진·시각·경로가 여기 있습니다) |
 | `.env.example` | (선택) 본인 Gemini API 키 — 없어도 전체가 동작합니다 |

@@ -69,6 +69,10 @@ gemini 선택 시 추가로: `python -m pip install google-genai`
 ## 3. 설정 생성
 1. `config.example.yaml` → `config.yaml` 복사 후, 선택한 TTS 엔진과 시각을 반영한다.
 2. gemini 선택 시: `.env.example` → `.env` 복사를 안내하고 **사용자가 직접** 키를 넣게 한다.
+3. 원장(`okf/`)과 수집 커서(`profiles/*.yaml` 의 last_checked)는 **원작자 시드**다 —
+   지우지 않는다. 첫 실행이 last_checked 이후의 새 사실을 자동으로 따라잡고,
+   낡은 개념은 stale_after·SUPERSEDE 가 정리한다. 사용자에게 "원장은 시드에서
+   출발하며 첫 호부터 최신으로 갱신된다"고 한 줄 안내한다.
 
 ## 4. 루틴 등록 — 현존 세션 우선
 1. **1차: 세션 크론** — CronCreate로 합의된 생성 시각 3분 전(디폴트 06:57)에 `routine-SKILL.md` 실행을

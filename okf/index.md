@@ -6,6 +6,13 @@ generated: { by: claude/opus-5, at: 2026-08-10T23:57:57Z }
 status: stable
 ---
 
+> **이 원장은 시드다.** 원작자가 2026-08-10~12에 수집·검증한 사실과 그 시점의
+> 수집 커서(profiles 의 last_checked)를 담고 있다. 설치 후 첫 실행부터 루틴이
+> last_checked 이후의 새 사실을 따라잡아 갱신하며, 낡은 개념은 stale_after 와
+> SUPERSEDE 규칙이 세대교체한다. 여기 실린 내용은 '오늘의 사실'이 아니라
+> '검증된 출발점'으로 읽는다.
+
+
 # 브리핑 지식 번들
 
 매일 실행이 읽는 범위는 이 파일과 `agenda/`, 그리고 `status: stable` 인 `facts/` 까지다.

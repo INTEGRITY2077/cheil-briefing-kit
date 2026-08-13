@@ -18,6 +18,15 @@ version: 1
 reviewer:                       # 기본 비움 — 예: human:hong.gd
 
 # ─────────────────────────────────────────────
+# 정성 심사 — publish-checklist IG4 (tools/check_review.py)
+# ─────────────────────────────────────────────
+# threshold: 3심사자(reader/refuter/crosser) 평균의 발행 임계.
+# 값이 있으면 templates/insight-rubric.yaml 의 threshold 보다 **우선**한다.
+# 비우거나 절 전체를 지우면 rubric 값(7.0)이 기본으로 쓰인다.
+review:
+  threshold: 7.0                # 정성 심사 임계 — rubric threshold 보다 우선
+
+# ─────────────────────────────────────────────
 # 경로 — 킷 루트 기준 상대경로
 # ─────────────────────────────────────────────
 paths:

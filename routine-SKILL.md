@@ -69,7 +69,7 @@ python -c "import json,os,datetime;p='output/ledger/run_log.jsonl';os.makedirs(o
 `ended_at`, `mode`(생산/검증/중단), `result`(산출/quiet_day/검증만/실패), `artifacts`(만든
 파일 목록), 실패면 `reason` 을 채운다. 같은 줄 재기록이 아니라 **종료 줄 append** 다.
 산출을 낸 실행의 종료 줄에는 `gates` 필드 — 실제로 실행한 기계 게이트 목록과 종료코드,
-예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0","check_theme:0","check_publish:0"]`
+예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0","check_theme:0","check_review:0","check_publish:0"]`
 — 를 반드시 기록한다. **게이트 기록이 없는 발행은 실패다** — `check_run.py` 가 산출물이
 실존하는데 종료 줄의 gates 가 없거나 비어 있으면 실패로 판정한다 (2026-08-13 이슈 #18 —
 게이트가 있는데 실행 자체를 건너뛴 채 발행된 사고에서).
@@ -369,6 +369,7 @@ python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — �
 python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8·H9(화두 구체성, issue #18) 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 python tools/check_theme.py output/web/YYYY-MM-DD.html     # IG3 연간 주제 정렬 — 마지막 전체검수. eval/theme-날짜.md 에 화두·단신·절·전시물 단위별 정렬/보조/무관 판정 기록이 정본. 화두=정렬 필수, 무관 0건, 검수 메타 언어(규명·표본·주장 강도 등) 지면 0건 (종료코드 0 필수, 2026-08-13 지시 — 비정렬 에피소드는 노이즈, 검수 설명은 지면 오염)
+python tools/check_review.py output/web/YYYY-MM-DD.html    # IG4 심사 봉인 — eval/review-YYYY-MM-DD.md 실존·3인×5차원 전수·평균≥임계(config review.threshold 우선, 기본 7.0)·지적 처리 칸 0빈칸·미달 시 재조판 1회→재심사 정책. 점수는 사람 패널(templates/review-form.md)이 매기고 이 게이트는 봉인만 한다. 소급 심사는 --retro (종료코드 0 필수)
 python tools/check_publish.py YYYY-MM-DD                   # E6 공유 확정 — 발행·공유 완료 뒤에만. api/frame 직접 판정(200+public, 무작위 uuid 대조군 자기검증) + 발행본 본문에 오늘 호 h1 대조 — 핀이 옛 버전·다른 호면 실패 (종료코드 0 필수, 이슈 #21 — 게이트는 발행본을 직접 본다. check_formats --check-links 도 링크의 발행본 실림(③)까지 판정한다)
 ```
 게이트를 돌리기 **전에** `eval/theme-YYYY-MM-DD.md` 판정표를 먼저 쓴다 — 각 단위가

@@ -5,7 +5,11 @@
 
 판정 다섯:
   ① 심사 기록 실존   — eval/review-<날짜>.md 가 있는가
-  ② 점수 전수        — 심사자 3인 × 5차원 점수가 전부 있는가 (누락 행 실패)
+  ② 점수 전수        — 심사자 3인 × 전 차원 점수가 전부 있는가 (누락 행 실패).
+                       차원 전수는 **루브릭 버전 스코핑**이다 — 기록 머리의
+                       「루브릭 버전 … vN」을 읽어, rubric 차원 중 since ≤ N 인
+                       것만 요구한다 (v1 기록은 R1~R5 5차원, v2 기록은 R6 포함 6차원.
+                       R6 v2 신설이 v1 기록을 소급 실패시키던 2026-08-13 검수 결함 수리)
   ③ 평균 ≥ 임계      — 전 점수 평균이 임계 이상인가.
                        임계의 정본은 templates/insight-rubric.yaml 의 threshold —
                        단 config.yaml 에 review.threshold 가 있으면 그것이 우선한다
@@ -30,7 +34,7 @@
     | # | 렌즈 | 지적 | 처리 (반영 / 기각-사유) | — 칸 위치는 헤더에서 읽으므로
     구형 | 지적 | 처리 | 도 받는다. 처리 칸이 공백뿐이면 빈 칸으로 판정한다.
   - 재심사 — 「재심사」 를 포함한 제목(#) 이후 전체. 그 안의 점수 표는 본심사와
-    같은 규칙(3인 × 5차원)으로 판정한다.
+    같은 규칙(3인 × 전 차원, 버전 스코핑 동일)으로 판정한다.
 
 관할 중복 명기 (2026-08-13 검수) — check_insight ⑥Q1(유보 종결 1/2 초과 = 발행
 차단)은 rubric R2/floor(전원 유보)와 판정 대상이 겹친다. 이 스크립트는 내용 판정을
@@ -40,8 +44,8 @@ check_insight 가 하드 실패로 뒤집을 수 있다(H6 류 정적 근사 선
 
 차원의 이름·개수 정본은 templates/insight-rubric.yaml — dimensions 류 목록을
 읽을 수 있으면 이름 대조까지 하고(누락 차원을 이름으로 지목), 못 읽으면
-행 수(5)로만 판정하고 경고를 남긴다. 게이트의 정직성(F5): 못 재는 것을
-재는 척하지 않는다.
+행 수(기록 버전의 차원 수 — v1은 5, v2는 6)로만 판정하고 경고를 남긴다.
+게이트의 정직성(F5): 못 재는 것을 재는 척하지 않는다.
 
 정적 검사라 네트워크 없이 돈다. 실패 시 종료코드 1.
 """
@@ -64,7 +68,9 @@ CONFIG = os.path.join(KIT_ROOT, "config.yaml")
 EVAL_DIR = os.path.join(KIT_ROOT, "eval")
 
 REVIEWERS_REQUIRED = 3
-DIMS_REQUIRED = 5
+# 버전별 차원 수 — rubric 을 못 읽을 때의 행 수 판정 폴백 (v1: R1~R5, v2: +R6)
+DIMS_REQUIRED_BY_VERSION = {1: 5, 2: 6}
+RUBRIC_VER_ROW = re.compile(r"^\|\s*루브릭\s*버전\s*\|[^|]*\bv(\d+)\b[^|]*\|")
 
 # 정본(review-form.md) 헤더 | 차원 | 점수 | 사유 한 줄 | — 구형 | 사유 | 도 허용
 SCORE_HEADER = re.compile(r"^\|\s*차원\s*\|\s*점수\s*\|\s*사유(\s*한\s*줄)?\s*\|")
@@ -149,32 +155,52 @@ def _find_key(node, key):
 
 
 def load_dimensions(warns):
-    """rubric 에서 차원 이름 목록을 읽는다. 못 읽으면 None — 행 수로만 판정 (경고)."""
+    """rubric 에서 (차원 (이름, since) 목록, rubric 버전)을 읽는다.
+
+    since 는 그 차원이 신설된 루브릭 버전(기본 1) — 기록 버전 스코핑의 정본이다.
+    못 읽으면 (None, None) — 행 수로만 판정 (경고).
+    """
     if not os.path.exists(RUBRIC):
-        warns.append("templates/insight-rubric.yaml 이 없다 — 차원 이름 대조 생략, 행 수(5)로만 판정")
-        return None
+        warns.append("templates/insight-rubric.yaml 이 없다 — 차원 이름 대조 생략, 행 수로만 판정")
+        return None, None
     try:
         import yaml
         with io.open(RUBRIC, encoding="utf-8") as f:
             y = yaml.safe_load(f) or {}
+        ver = _find_key(y, "version")
+        ver = int(ver) if ver is not None else None
         for key in ("dimensions", "차원", "axes"):
             dims = _find_list(y, key)
             if dims:
                 names = []
                 for d in dims:
                     if isinstance(d, str):
-                        names.append(d)
+                        names.append((d, 1))
                     elif isinstance(d, dict):
                         for nk in ("name", "id", "이름", "차원"):
                             if d.get(nk):
-                                names.append(str(d[nk]))
+                                names.append((str(d[nk]), int(d.get("since") or 1)))
                                 break
                 if len(names) == len(dims):
-                    return names
-        warns.append("rubric 에서 차원 목록(dimensions)을 찾지 못했다 — 행 수(5)로만 판정")
+                    return names, ver
+        warns.append("rubric 에서 차원 목록(dimensions)을 찾지 못했다 — 행 수로만 판정")
     except Exception:
-        warns.append("rubric 을 읽지 못했다 — 차원 이름 대조 생략, 행 수(5)로만 판정")
-    return None
+        warns.append("rubric 을 읽지 못했다 — 차원 이름 대조 생략, 행 수로만 판정")
+    return None, None
+
+
+def record_rubric_version(lines, warns, fallback):
+    """기록 머리의 「루브릭 버전 … vN」 행에서 N 을 읽는다 — 차원 전수의 스코프.
+
+    행이 없으면 현행 rubric 버전(fallback)으로 간주하고 경고한다 — 버전 무표기
+    기록은 현행 전 차원을 요구받는다 (양식 review-form.md 가 버전 행을 정본으로 갖는다).
+    """
+    for ln in lines:
+        m = RUBRIC_VER_ROW.match(ln)
+        if m:
+            return int(m.group(1))
+    warns.append(f"기록에 루브릭 버전 행이 없다 — 현행 rubric v{fallback} 전 차원으로 판정 (양식 위반 의심)")
+    return fallback
 
 
 def _find_list(node, key):
@@ -197,7 +223,7 @@ def split_cells(line):
     return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
-def parse_part(lines, label, dims, errors, warns):
+def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None):
     """한 파트(본심사 / 재심사)에서 심사자 점수 표·종합 평균 줄·지적 목록을 읽는다.
 
     돌려주는 값: (점수 전체 목록, 심사자 수, 적힌 종합 평균 or None)
@@ -244,12 +270,12 @@ def parse_part(lines, label, dims, errors, warns):
             if dims:
                 for d in dims:
                     if d not in seen:
-                        errors.append(f"[{label}·{reviewer}] 차원 [{d}] 행이 없다 (② 3인×5차원 전수 — 누락 행 실패)")
-                extra = [d for d in seen if d not in dims]
+                        errors.append(f"[{label}·{reviewer}] 차원 [{d}] 행이 없다 (② 3인×전차원 전수, 버전 스코핑 — 누락 행 실패)")
+                extra = [d for d in seen if d not in (known or dims)]
                 if extra:
                     warns.append(f"[{label}·{reviewer}] rubric 에 없는 차원 {extra} — rubric 정본과 대조 필요")
-            elif len(seen) < DIMS_REQUIRED:
-                errors.append(f"[{label}·{reviewer}] 차원 {len(seen)}행 < {DIMS_REQUIRED} (② 전수 — 누락 행 실패)")
+            elif dims_required and len(seen) < dims_required:
+                errors.append(f"[{label}·{reviewer}] 차원 {len(seen)}행 < {dims_required} (② 전수 — 누락 행 실패)")
             scores.extend(seen.values())
             continue
         cols = issue_cols(line)
@@ -292,16 +318,26 @@ def main():
 
     warns, errors = [], []
     threshold, src = load_threshold(warns)
-    dims = load_dimensions(warns)
-    print(f"임계 {threshold} ({src})" + (f" · 차원 정본 {dims}" if dims else ""))
+    all_dims, rubric_ver = load_dimensions(warns)
+    if rubric_ver is None:
+        rubric_ver = max(DIMS_REQUIRED_BY_VERSION)
 
     text = io.open(review_path, encoding="utf-8").read()
     lines = text.splitlines()
+    rec_ver = record_rubric_version(lines, warns, rubric_ver)
+    if rec_ver > rubric_ver:
+        warns.append(f"기록의 루브릭 버전 v{rec_ver} > 현행 rubric v{rubric_ver} — rubric 정본 갱신 누락 의심")
+    # 버전 스코핑 — 기록 버전 이후 신설(since > rec_ver)된 차원은 그 기록에 요구하지 않는다
+    dims = [n for n, s in all_dims if s <= rec_ver] if all_dims else None
+    known = [n for n, _ in all_dims] if all_dims else None
+    dims_required = DIMS_REQUIRED_BY_VERSION.get(rec_ver, max(DIMS_REQUIRED_BY_VERSION.values()))
+    print(f"임계 {threshold} ({src}) · 기록 루브릭 v{rec_ver}" + (f" · 요구 차원 {dims}" if dims else ""))
+
     split_at = next((idx for idx, ln in enumerate(lines) if REREVIEW_HEADING.match(ln)), None)
     main_lines = lines[:split_at] if split_at is not None else lines
     re_lines = lines[split_at:] if split_at is not None else []
 
-    scores, reviewers, stated = parse_part(main_lines, "본심사", dims, errors, warns)
+    scores, reviewers, stated = parse_part(main_lines, "본심사", dims, errors, warns, known, dims_required)
     avg = sum(scores) / len(scores) if scores else 0.0
     print(f"②③: 본심사 심사자 {len(reviewers)}인 · 점수 {len(scores)}개 · 평균 {avg:.2f} (임계 {threshold})")
     if stated is None:
@@ -321,7 +357,7 @@ def main():
                 errors.append(f"본심사 평균 {avg:.2f} < 임계 {threshold} 인데 재심사 섹션이 없다 "
                               "(⑤ 재조판 1회 → 재심사 정책 — 미달 호는 재조판하고 다시 심사받는다)")
         else:
-            r_scores, r_reviewers, r_stated = parse_part(re_lines, "재심사", dims, errors, warns)
+            r_scores, r_reviewers, r_stated = parse_part(re_lines, "재심사", dims, errors, warns, known, dims_required)
             if not r_scores:
                 errors.append("재심사 섹션은 있는데 점수 표가 없다 (⑤ — 제목만 있는 재심사는 재심사가 아니다)")
             else:

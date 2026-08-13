@@ -79,6 +79,7 @@ https://github.com/INTEGRITY2077/cheil-briefing-kit 를 읽고 SETUP.md 대로 �
 
 | 경로 | 내용 |
 |---|---|
+| `VERSION` · `CHANGELOG.md` | **킷 버전 정본** — CalVer `vYYYY.MM.DD[.N]`, 정책이 바뀐 날만 올립니다. 루틴이 매 실행 `tools/check_version.py`로 원격과 대조해 구판이면 생산 전에 `git pull` 합니다 (산출물은 워커마다 독립, 정책은 전 워커 정렬) |
 | `CLAUDE.md` | **레포를 연 Claude의 역할 계약** — 기본은 설치자·운영자, 저장소 개발·push는 원작자 명시 요청 시에만 |
 | `SETUP.md` | Claude가 따라 하는 설치 절차 — 헬스체크 → 합의 카드 한 번 → 무인 설치·루틴 등록 |
 | `routine-SKILL.md` | 매일 아침 루틴의 전체 지시서 (시각·경로는 config·설치 시 주입) |

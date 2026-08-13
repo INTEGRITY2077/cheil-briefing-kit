@@ -182,9 +182,28 @@ JSONL 정본(`output/ledger/`)은 gitignore 대상이라 배포되지 않는다 
 뉴스와 비교는 어느 축의 이야기인지 명시한다 — 내수 경쟁사 실적으로 해외 사업을,
 해외 지주 담론으로 내수 시장을 설명하지 않는다.
 
+# 3b. 편집 3단 — 계약금·중도금·잔금 (2026-08-13 확정, 정본 templates/pipeline-three-stage.md)
+비싼 조판을 심사 루프에 두지 않는다 — 심사는 싼 단계에서 다 치르고 조판은 1회다
+(실측: 뼈대 심사 루프는 분 단위, HTML 재조판은 시간 단위).
+- **① 계약금 — 화두 가설 심사** (문장 2~3줄, 조판물 없음). 첫 질문은 큰축 대조다:
+  「오늘 관측이 어느 큰축(profiles macro_axes·okf/axes.md)을 움직였나」. 기각 사유
+  소거: 연간 주제 비정렬·무담보 긴박감·내부어·노이즈(소송류)·카피 인테그리티 위반
+  (헤드의 명사는 본문·원장 실존 명사만, 독자=의사결정을 이루는 팀 주어 우선 —
+  루브릭 R6). 낙점이 아니라 허가 — 후보 병행 가능, 형은 ②까지 유동.
+- **② 중도금 — 뼈대 조판** (MD 30~50줄: 화두+스탠드퍼스트+절 리드+함의,
+  `eval/proto-2026-08-13.md` 판형이 정본). 정성 심사 3렌즈는 여기서 돈다 —
+  미달이면 뼈대 수정·재심사(분 단위). 작은축(절)마다 소속 큰축을 선언한다(IG5) —
+  무소속 절은 필요성 재평가.
+- **③ 잔금 — 지면 조판 1회.** 정량 게이트만. 유일한 정성 질문은 「조판이 뼈대를
+  배신했는가」 — 배신 수리는 조판 몫, 뼈대를 고치려면 ②로 회귀한다.
+정성 심사(IG4)는 시범 운용이다 — 임계 시작값 7.0(config review.threshold),
+미달이어도 발행은 하되 보고에 「정성 미달 N점」 명기. 임계·차단 승격은 편집장 결정.
+
 # 4. 산출물 생성
 대본은 `templates/script-radio.md` 를 따라 `output/script/YYYY-MM-DD.md` 로 쓴다.
 심층이면 아티팩트도 갱신한다.
+수집 등재 시 각 사실의 **큰축 관측 태그**(지지/반증/조건형성/중립·소속 MA#)를 함께
+판정해 `okf/axes.md` 점수판을 갱신한다 — 소급 재조사(2026-08-13)는 끝났고 이후는 증분이다.
 
 두괄식을 지킨다.
 - 문서 최상단 「핵심」 블록을 먼저 갱신한다. 여섯 줄만 읽으면 결론이 끝나야 한다
@@ -369,7 +388,7 @@ python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — �
 python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8·H9(화두 구체성, issue #18) 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 python tools/check_theme.py output/web/YYYY-MM-DD.html     # IG3 연간 주제 정렬 — 마지막 전체검수. eval/theme-날짜.md 에 화두·단신·절·전시물 단위별 정렬/보조/무관 판정 기록이 정본. 화두=정렬 필수, 무관 0건, 검수 메타 언어(규명·표본·주장 강도 등) 지면 0건 (종료코드 0 필수, 2026-08-13 지시 — 비정렬 에피소드는 노이즈, 검수 설명은 지면 오염)
-python tools/check_review.py output/web/YYYY-MM-DD.html    # IG4 심사 봉인 — eval/review-YYYY-MM-DD.md 실존·3인×5차원 전수·평균≥임계(config review.threshold 우선, 기본 7.0)·지적 처리 칸 0빈칸·미달 시 재조판 1회→재심사 정책. 점수는 사람 패널(templates/review-form.md)이 매기고 이 게이트는 봉인만 한다. 소급 심사는 --retro (종료코드 0 필수)
+python tools/check_review.py output/web/YYYY-MM-DD.html    # IG4 심사 봉인 — eval/review-YYYY-MM-DD.md 실존·3인×전차원 전수(루브릭 버전 스코핑 — v2 6차원, v1 기록 5차원)·평균≥임계(config review.threshold 우선, 기본 7.0)·지적 처리 칸 0빈칸·미달 시 재조판 1회→재심사. 점수는 심사 패널(templates/review-form.md)이 매기고 이 게이트는 봉인만 한다. 소급 심사는 --retro (종료코드 0 필수. 심사 대상의 정본은 중도금 뼈대 MD — templates/pipeline-three-stage.md)
 python tools/check_publish.py YYYY-MM-DD                   # E6 공유 확정 — 발행·공유 완료 뒤에만. api/frame 직접 판정(200+public, 무작위 uuid 대조군 자기검증) + 발행본 본문에 오늘 호 h1 대조 — 핀이 옛 버전·다른 호면 실패 (종료코드 0 필수, 이슈 #21 — 게이트는 발행본을 직접 본다. check_formats --check-links 도 링크의 발행본 실림(③)까지 판정한다)
 ```
 게이트를 돌리기 **전에** `eval/theme-YYYY-MM-DD.md` 판정표를 먼저 쓴다 — 각 단위가

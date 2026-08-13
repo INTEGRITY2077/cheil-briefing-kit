@@ -308,6 +308,11 @@ a{color:inherit;text-underline-offset:2px}
       <div><span class="tt">발견</span><b data-spine="발견">[[발견 — 예상과 어긋난 하나. 없으면 빈 칸]]</b></div>
       <div><span class="tt">근거</span><p data-spine="근거">[[견본: F-004 — 상반기 누적 영업이익 · F-024 — 사전판매 기록]]</p></div>
     </div>
+
+    <!-- 슬롯 2b · 큰축 점수판 — 한 줄. 화두가 소속·승격된 큰축의 현재 관측 요약.
+         정본: profiles/cheil.yaml macro_axes.status · 관측 원장: okf/axes.md.
+         (IG5 는 절의 data-macro 선언 조항 — 이 점수판 한 줄과는 별개다. 아래 슬롯 5 참조.)
+         견본: <p class="note">큰축 MA2 — 지지 10 · 조건형성 5 · 중립 4 · 반증 0 · 최신 관측 F-033</p> -->
   </header>
 
   <!-- 슬롯 3 · 세 개의 숫자 — 화두를 숫자 셋으로 요약할 수 있을 때만 -->
@@ -323,8 +328,11 @@ a{color:inherit;text-underline-offset:2px}
   <!-- 슬롯 5 · 축 절 — 매일 필수. 지면은 힘겨루기 축으로 구성한다 (insight-guard 10절: 자료 종류·소스별·시간순 금지).
        이 블록의 계약은 check_insight IG1 ①·②(I2)가 판정한다 — 축 마크업 >=1,
        data-side-a/b 에 F-ID 각 2건 이상 + okf/facts/ 실존. 축이 서면 하나가 아니라 축마다 이 절을 반복한다.
-       h2 가 「헤드라인(축)」 — 규명 서술, headline-guard S1(의문형 금지)·숫자 금지(pull 박스가 전담) 적용. -->
-  <section class="sec" data-axis="[[축 이름 — 영역 이름만]]" data-side-a="[[견본: F-001, F-004]]" data-side-b="[[견본: F-018, F-024]]">
+       h2 가 「헤드라인(축)」 — 규명 서술, headline-guard S1(의문형 금지)·숫자 금지(pull 박스가 전담) 적용.
+       data-macro — 작은축의 소속 큰축 선언 (publish-checklist IG5). 값은 profiles/cheil.yaml macro_axes 의
+       id(MA1…), 관측 원장은 okf/axes.md. 무소속(속성 없음)은 즉시 실패가 아니라 필요성 재평가 대상 —
+       재평가 근거를 eval/ 에 남긴다. -->
+  <section class="sec" data-macro="[[MA# — 소속 큰축]]" data-axis="[[축 이름 — 영역 이름만]]" data-side-a="[[견본: F-001, F-004]]" data-side-b="[[견본: F-018, F-024]]">
     <h2><span class="n">[[NN]]</span>[[축 헤드라인 — 규명 서술. 의문형·숫자 금지, 30자 이내]]</h2>
 
     <!-- pull 박스 — 겨루는 두 방향의 숫자를 여기 전부 싣는다 (headline-guard 3절).

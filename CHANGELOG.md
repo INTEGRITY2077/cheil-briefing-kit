@@ -11,6 +11,26 @@
   정책은 전 워커가 같은 버전 위에서 생산해야 한다 (2026-08-13 지시:
   "저쪽의 독립 생산물임. 유착되면 안됨. 다만 레포의 정책은 정렬되어야함").
 
+## v2026.08.13.2
+
+- **SETUP 자동 의존성 설치 승격**: python·git 부재는 더 이상 "안내 후 중단"(T0
+  차단)이 아니다 — Windows 는 winget 무인 설치(`Python.Python.3.12`·`Git.Git`,
+  확정형 플래그) 후 재판정한다. 설치 시점은 카드 ② 승인 직후(승인 전 설치 금지),
+  카드 ② 열거 승인에 4)항 "자동 설치의 범위" 추가. winget 부재·설치 실패·
+  macOS/Linux 만 링크·brew/apt 안내로 강등하고 그때만 멈춘다.
+- **MS스토어 파이썬 앨리어스 함정 판별**: `python --version` 은 앨리어스에서도
+  잡힌다(종료코드 9009·스토어 창) — 판별을 `python -c "import sys;..."` 종료코드
+  기준으로 교체, `where.exe python` 의 WindowsApps 경로 필터를 보조 판별로 명시.
+  winget 설치 직후 현재 셸 PATH 미반영 주의점 병기.
+- **zip 강등 사유 명문화** (SETUP 1절): git 부재 시 "winget 설치 후 clone > zip
+  최후 강등" 사다리로 교체. zip 설치본은 `.git` 부재로 check_version 구판 감지 시
+  `git pull` 자가 치유가 불가 — "구판 정책 위 생산 금지"가 차단에서 경고로 약해지고
+  저장소 동기화 절이 비활성화된다는 비용을 명시.
+- **AAC 잔존 문구 정정** (v2026.08.13 MP3 개정의 후속): README 산출물 절·SETUP §2
+  선택 의존성·publish-checklist D8·check_size 공식 주석을 MP3 기준으로 정렬.
+  `embed_radio.py` 의 .mp4/.m4a 입력은 직접 임베드(audio/mp4) 경로를 제거하고
+  MP3 변환 강제(변환 불가 시 중단)로 개정 — D2 금지와의 자기모순 해소.
+
 ## v2026.08.13
 
 - **공개 공유 409 unscannable 종결** (#14): 원인은 AAC(`data:audio/mp4`) data URI —

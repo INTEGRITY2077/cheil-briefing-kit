@@ -95,7 +95,7 @@ https://github.com/INTEGRITY2077/cheil-briefing-kit 를 읽고 SETUP.md 대로 �
 ## 산출물
 
 - **웹판**: 전시물(공시·IR 원문 재현+하이라이트+주석) 중심의 그날 뉴스, 상단에 라디오
-  플레이어(기본 1.3× 배속, −/+ 조절). 오디오는 MP4(AAC)로 실어 호가 3MB 안쪽입니다.
+  플레이어(기본 1.3× 배속, −/+ 조절). 오디오는 MP3(audio/mpeg)로 실어 호가 3MB 안쪽입니다.
   **아티팩트 안에서 저장은 안 됩니다** — 뷰어 iframe에 `allow-downloads`가 없고,
   런타임의 `downloads` capability를 쓰면 공개 공유 자체가 막힙니다. 오디오 파일이
   필요하면 로컬 `output/audio/YYYY-MM-DD.wav`를 배포 묶음에 첨부하세요

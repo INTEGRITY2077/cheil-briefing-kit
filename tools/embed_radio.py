@@ -9,7 +9,8 @@
   imageio-ffmpeg(선택 의존성, SETUP §2)가 있으면 MP3 로 변환해 audio/mpeg 로
   임베드하고 (2026-08-12 실측: 7.42MB → 2.09MB, 길이·표본율 동일), 없거나 변환이
   실패하면 경고 후 원본 그대로 임베드로 강등한다 (종료코드 0 유지 — D2 는 경고로 남는다).
-  이미 .mp4/.m4a 면 변환 없이 임베드한다. 변환 산출물은 임시 디렉토리에만 쓰고
+  .mp4/.m4a 입력도 MP3 로 변환한다 — audio/mp4 임베드는 금지(D2)라, 변환이
+  불가하면 이 경우에만 강등 없이 중단한다. 변환 산출물은 임시 디렉토리에만 쓰고
   원본 오디오 파일은 절대 건드리지 않는다.
 - **비트레이트·채널·호 상한은 config 의 `tts.embed` 가 정본이다** (하드코딩 금지).
   종전에는 96k 가 코드에 박혀 있어 호 길이가 늘면 조정할 지점이 없었다. config 가
@@ -36,11 +37,13 @@ for _s in (sys.stdout, sys.stderr):
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from script_lib import parse_script
 
-USAGE = "사용법: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3|mp4|m4a> <대본.md>"
+USAGE = ("사용법: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3|mp4|m4a> <대본.md>"
+         " — 어떤 입력이든 MP3(audio/mpeg) 로 변환해 임베드한다 (D2)")
 
 # 확장자 → MIME (없는 확장자는 audio/mpeg 로 강등)
-AUDIO_MIME = {".wav": "audio/wav", ".mp3": "audio/mpeg",
-              ".mp4": "audio/mp4", ".m4a": "audio/mp4"}
+# audio/mp4 는 지도에 없다 — D2 금지 (409 unscannable, 2026-08-13 규명).
+# .mp4/.m4a 입력은 아래에서 MP3 변환을 강제하므로 이 지도에 도달하지 않는다.
+AUDIO_MIME = {".wav": "audio/wav", ".mp3": "audio/mpeg"}
 
 # 강등 경고 — 원인을 갈라서 낸다 (이슈 #4: 설치 문제와 입력 문제를 로그로 구분)
 WARN_NO_FFMPEG = "경고: imageio-ffmpeg 미설치 — 원본 그대로 임베드, 호 용량 커짐(D2). SETUP §2 선택 의존성"
@@ -102,7 +105,7 @@ def validate_audio(path):
 
 
 def to_mp3(src, bitrate, channels):
-    """WAV 를 MP3 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
+    """입력 오디오를 MP3 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
 
     코덱이 MP3 인 것은 규명 결과다 — 2026-08-13 실측: AAC(audio/mp4) data URI 는
     아티팩트 공개 공유의 콘텐츠 스캔이 못 다뤄 409 unscannable 로 거절된다
@@ -211,13 +214,18 @@ def main():
     if n != 1:
         sys.exit(f"중단: data:audio 데이터 URI가 {n}개다 (1개여야 한다)")
 
-    # 1) 오디오 준비 — WAV/MP3 는 AAC 자동 변환 (D2), 실패 시 원본 강등.
+    # 1) 오디오 준비 — 입력을 MP3(audio/mpeg) 로 자동 변환 (D2).
+    #    WAV/MP3 는 변환 실패 시 원본 강등, .mp4/.m4a 는 강등 불가(중단) —
+    #    audio/mp4 임베드는 금지다 (409 unscannable, 2026-08-13 규명).
     #    비트레이트·채널은 config 의 tts.embed 가 정본이다
     cfg = load_embed_cfg()
     ext = os.path.splitext(wav_p)[1].lower()
     audio_src = wav_p
-    if ext in (".wav", ".mp3"):
+    if ext in (".wav", ".mp3", ".mp4", ".m4a"):
         conv = to_mp3(wav_p, cfg["bitrate"], cfg["channels"])
+        if not conv and ext in (".mp4", ".m4a"):
+            sys.exit("중단: .mp4/.m4a 는 MP3 변환 없이 임베드할 수 없다 (D2 — "
+                     "audio/mp4 는 공개 공유 409 unscannable). imageio-ffmpeg 설치(SETUP §2) 후 재실행하라")
         if conv:
             audio_src = conv
             print(f"변환: {os.path.basename(wav_p)} "

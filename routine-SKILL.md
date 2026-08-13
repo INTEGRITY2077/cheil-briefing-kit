@@ -69,7 +69,7 @@ python -c "import json,os,datetime;p='output/ledger/run_log.jsonl';os.makedirs(o
 `ended_at`, `mode`(생산/검증/중단), `result`(산출/quiet_day/검증만/실패), `artifacts`(만든
 파일 목록), 실패면 `reason` 을 채운다. 같은 줄 재기록이 아니라 **종료 줄 append** 다.
 산출을 낸 실행의 종료 줄에는 `gates` 필드 — 실제로 실행한 기계 게이트 목록과 종료코드,
-예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0"]`
+예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0","check_theme:0"]`
 — 를 반드시 기록한다. **게이트 기록이 없는 발행은 실패다** — `check_run.py` 가 산출물이
 실존하는데 종료 줄의 gates 가 없거나 비어 있으면 실패로 판정한다 (2026-08-13 이슈 #18 —
 게이트가 있는데 실행 자체를 건너뛴 채 발행된 사고에서).
@@ -360,7 +360,11 @@ python tools/check_ledger.py                               # D7 원장 정합 �
 python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — 상한 초과 시 공개 공유가 거절된다 (종료코드 0 필수, config tts.embed.max_html_mb)
 python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8·H9(화두 구체성, issue #18) 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
+python tools/check_theme.py output/web/YYYY-MM-DD.html     # IG3 연간 주제 정렬 — 마지막 전체검수. eval/theme-날짜.md 에 화두·단신·절·전시물 단위별 정렬/보조/무관 판정 기록이 정본. 화두=정렬 필수, 무관 0건, 검수 메타 언어(규명·표본·주장 강도 등) 지면 0건 (종료코드 0 필수, 2026-08-13 지시 — 비정렬 에피소드는 노이즈, 검수 설명은 지면 오염)
 ```
+게이트를 돌리기 **전에** `eval/theme-YYYY-MM-DD.md` 판정표를 먼저 쓴다 — 각 단위가
+연간 주제(profiles spine.annual_theme)와 어떻게 정렬되는지, '보조'는 왜 필요한 토픽인지
+근거 한 줄씩. '무관' 판정이 나온 단위는 지면에서 빼고 나서 발행한다.
 돌린 게이트와 종료코드는 run_log 종료 줄의 `gates` 필드에 그대로 옮긴다 (0-원장 절 —
 게이트 기록이 없는 발행은 check_run.py 가 실패로 판정한다).
 `check_formats` 는 4c(덱 발행)에서 fmtbar에 덱 URL을 넣은 **뒤** 한 번 더 돌린다 —

@@ -164,6 +164,12 @@
   정적 부분(h1 과 받는 줄에 단위 붙은 수·원장 고유명사가 둘 다 0이면 실패)은 IG1 의
   `check_insight.py` 가 ⑤(H9) 로 같이 판정하고, background_test 는 사람 판정으로
   기록한다. 2026-08-12 세 번 연속 반려(issue #18) 실측
+- IG3. (기계) — `check_theme`: 연간 주제 정렬 전수 판정(화두=정렬 필수·무관 0)·검수 메타
+  언어 0건. `eval/theme-날짜.md` 가 판정 원본. `python tools/check_theme.py <웹판.html>`
+  종료코드 0. 마지막 전체검수 — 지면의 모든 단위(화두·01절 단신·section.sec·figure.exhibit)를
+  `profiles/cheil.yaml` 의 annual_theme 기준으로 정렬/보조/무관 판정하고, '무관' 단위는
+  지면에서 뺀 뒤 발행한다. 검수 설명(규명·표본·주장 강도·보류 슬롯 등)은 지면 오염이므로
+  0건이어야 한다 — 판정 흔적은 eval 원본으로 옮긴다 (편집장 지시 2026-08-13 ②③)
 
 ## E. 배포
 - E1. 게이트 전부 통과 후 Share "Anyone with the link" ON — **그날 발행한 아티팩트 전부에**.

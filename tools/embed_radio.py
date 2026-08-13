@@ -3,9 +3,10 @@
 
 사용: python tools/embed_radio.py <웹판.html> <오디오.wav|mp3|mp4|m4a> <대본.md>
 
-- 웹판 표준 컨테이너는 **MP4(AAC)** 다 (D2·routine 4b, 2026-08-12 확정 —
-  WAV 그대로 실으면 호가 10MB 를 넘는다). **WAV/MP3 입력은 이 도구가 자동 변환한다**:
-  imageio-ffmpeg(선택 의존성, SETUP §2)가 있으면 AAC 로 변환해 audio/mp4 로
+- 웹판 표준 컨테이너는 **MP3(audio/mpeg)** 다 (2026-08-13 개정 — 종전 표준
+  MP4(AAC)는 공개 공유의 콘텐츠 스캔이 못 다뤄 409 unscannable, 이슈 #14 진범.
+  WAV 그대로 실으면 호가 10MB 를 넘는다). **WAV 입력은 이 도구가 자동 변환한다**:
+  imageio-ffmpeg(선택 의존성, SETUP §2)가 있으면 MP3 로 변환해 audio/mpeg 로
   임베드하고 (2026-08-12 실측: 7.42MB → 2.09MB, 길이·표본율 동일), 없거나 변환이
   실패하면 경고 후 원본 그대로 임베드로 강등한다 (종료코드 0 유지 — D2 는 경고로 남는다).
   이미 .mp4/.m4a 면 변환 없이 임베드한다. 변환 산출물은 임시 디렉토리에만 쓰고
@@ -43,7 +44,7 @@ AUDIO_MIME = {".wav": "audio/wav", ".mp3": "audio/mpeg",
 
 # 강등 경고 — 원인을 갈라서 낸다 (이슈 #4: 설치 문제와 입력 문제를 로그로 구분)
 WARN_NO_FFMPEG = "경고: imageio-ffmpeg 미설치 — 원본 그대로 임베드, 호 용량 커짐(D2). SETUP §2 선택 의존성"
-WARN_CONV_FAIL = "경고: AAC 변환 실패(ffmpeg 비정상 종료/빈 출력) — 원본 그대로 임베드, 호 용량 커짐(D2)"
+WARN_CONV_FAIL = "경고: MP3 변환 실패(ffmpeg 비정상 종료/빈 출력) — 원본 그대로 임베드, 호 용량 커짐(D2)"
 
 # 오디오 최소 크기 — 빈 파일·토막 파일 차단 (이슈 #4). 실측 최소 정상치:
 # 3줄 견본 AAC 96k ≈ 96KB, edge mp3 ≈ 128KB. 30KB 미만은 정상 합성일 수 없다.
@@ -100,9 +101,13 @@ def validate_audio(path):
     return None
 
 
-def to_aac(src, bitrate, channels):
-    """WAV/MP3 를 MP4(AAC) 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
+def to_mp3(src, bitrate, channels):
+    """WAV 를 MP3 로 변환한다. 성공 시 변환 파일 경로, 실패 시 None.
 
+    코덱이 MP3 인 것은 규명 결과다 — 2026-08-13 실측: AAC(audio/mp4) data URI 는
+    아티팩트 공개 공유의 콘텐츠 스캔이 못 다뤄 409 unscannable 로 거절된다
+    (이슈 #14 의 진범 — 클라이언트 버전 가설은 오진). MP3(audio/mpeg)는 같은
+    비트레이트에서 스캔을 통과했다. audio/mp4 로 임베드하지 마라.
     비트레이트·채널은 config 의 `tts.embed` 에서 온다 (하드코딩 금지 — 2026-08-12
     공유 거절의 원인이 코드에 박힌 96k 였다).
     imageio-ffmpeg 는 선택 의존성(SETUP §2, 약 87MB) — ImportError 나 변환 실패
@@ -116,9 +121,9 @@ def to_aac(src, bitrate, channels):
         return None
     import subprocess, tempfile
     exe = imageio_ffmpeg.get_ffmpeg_exe()
-    out = os.path.join(tempfile.mkdtemp(prefix="embed_radio_"), "audio.m4a")
+    out = os.path.join(tempfile.mkdtemp(prefix="embed_radio_"), "audio.mp3")
     try:
-        r = subprocess.run([exe, "-y", "-i", src, "-vn", "-c:a", "aac",
+        r = subprocess.run([exe, "-y", "-i", src, "-vn", "-c:a", "libmp3lame",
                             "-b:a", str(bitrate), "-ac", str(channels), out],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
@@ -212,11 +217,11 @@ def main():
     ext = os.path.splitext(wav_p)[1].lower()
     audio_src = wav_p
     if ext in (".wav", ".mp3"):
-        conv = to_aac(wav_p, cfg["bitrate"], cfg["channels"])
+        conv = to_mp3(wav_p, cfg["bitrate"], cfg["channels"])
         if conv:
             audio_src = conv
             print(f"변환: {os.path.basename(wav_p)} "
-                  f"{os.path.getsize(wav_p)/1048576:.2f}MB → AAC {cfg['bitrate']} "
+                  f"{os.path.getsize(wav_p)/1048576:.2f}MB → MP3 {cfg['bitrate']} "
                   f"{cfg['channels']}ch {os.path.getsize(conv)/1048576:.2f}MB")
     mime = AUDIO_MIME.get(os.path.splitext(audio_src)[1].lower(), "audio/mpeg")
     b64 = base64.b64encode(open(audio_src, "rb").read()).decode()

@@ -69,7 +69,7 @@ python -c "import json,os,datetime;p='output/ledger/run_log.jsonl';os.makedirs(o
 `ended_at`, `mode`(생산/검증/중단), `result`(산출/quiet_day/검증만/실패), `artifacts`(만든
 파일 목록), 실패면 `reason` 을 채운다. 같은 줄 재기록이 아니라 **종료 줄 append** 다.
 산출을 낸 실행의 종료 줄에는 `gates` 필드 — 실제로 실행한 기계 게이트 목록과 종료코드,
-예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0","check_theme:0"]`
+예: `"gates":["check_tables:0","check_exhibits:0","check_css_vars:0","check_ledger:0","check_size:0","check_insight:0","check_formats:0","check_theme:0","check_publish:0"]`
 — 를 반드시 기록한다. **게이트 기록이 없는 발행은 실패다** — `check_run.py` 가 산출물이
 실존하는데 종료 줄의 gates 가 없거나 비어 있으면 실패로 판정한다 (2026-08-13 이슈 #18 —
 게이트가 있는데 실행 자체를 건너뛴 채 발행된 사고에서).
@@ -213,26 +213,26 @@ iframe sandbox에 allow-downloads가 없어 ⋮ 메뉴의 다운로드 항목 �
 거부한다 (deploy 422, 2026-08-12 실측). 허용 확장자에 wav·mp3 도 없다. 공개 배포
 호에는 저장 버튼을 넣지 않는다.
 
-웹판에 싣는 오디오는 **MP4(AAC 96k)** 로 변환해 넣는다 (2026-08-12 확정):
+웹판에 싣는 오디오는 **MP3(audio/mpeg)** 로 변환해 넣는다 (2026-08-13 개정 — 종전
+표준이던 MP4(AAC)가 409 unscannable 의 **진범**으로 규명됐다, 아래 참조):
 WAV 를 그대로 data URI 로 실으면 호가 10MB 를 넘어 첫 렌더가 눈에 띄게 느리다.
-같은 음성이 1/4 로 줄고(7.42MB → 2.09MB) 길이·표본율은 그대로다. 로컬
-`output/audio/YYYY-MM-DD.wav` 원본은 배포 묶음용으로 남긴다.
-비트레이트·채널은 **config 의 `tts.embed`** 가 정본이다(기본 64k·모노). 하드코딩하지 않는다.
-발행 전 `tools/check_size.py`(D8)로 호 크기를 판정하되, **그 게이트는 편집 규율이지
-공개 공유의 보증이 아니다** — 2026-08-12 에 3.28MB 호와 2.14MB 호가 **둘 다** 공개 전환에서
-거절됐다. 거절의 실체는 `PATCH /api/frame/perm/<id>` → 409 `{"reason":"unscannable"}` 이고,
-화면 문구("This version can't be shared publicly…")는 원인과 무관하다. 자세한 판정 절차는
-`templates/publish-checklist.md` E5 를 따른다 — 거절되면 문구를 옮겨 적지 말고 그 PATCH 의
-응답 본문을 확인해 보고에 적는다.
-변환 명령 (imageio-ffmpeg — SETUP 2절 선택 의존성, 2026-08-12 실측: 12.26MB → 1.79MB):
-```
-python -c "import imageio_ffmpeg,subprocess,sys;subprocess.check_call([imageio_ffmpeg.get_ffmpeg_exe(),'-y','-loglevel','error','-i',sys.argv[1],'-c:a','aac','-b:a','96k',sys.argv[2]])" output/audio/YYYY-MM-DD.wav output/audio/YYYY-MM-DD.mp4
-```
-이식은 변환본으로: `python tools/embed_radio.py <웹판.html> output/audio/YYYY-MM-DD.mp4 <대본.md>`
-(.mp4/.m4a 는 audio/mp4 MIME 으로 실린다). WAV/MP3 를 그대로 넣어도 embed_radio 가
-**같은 변환을 스스로 시도**하므로(2026-08-12 실측: 11.69MB → 1.70MB, audio/mp4 임베드)
-수동 변환 단계를 빼먹어도 D2 는 지켜진다. imageio-ffmpeg 미설치·변환 실패면 경고 후
+로컬 `output/audio/YYYY-MM-DD.wav` 원본은 배포 묶음용으로 남긴다.
+비트레이트·채널은 **config 의 `tts.embed`** 가 정본이다(기본 48k·모노). 하드코딩하지 않는다.
+발행 전 `tools/check_size.py`(D8)로 호 크기를 판정한다.
+**공개 공유 거절(409 unscannable)의 원인은 크기가 아니라 코덱이다** — 2026-08-13 규명:
+같은 데스크톱 앱에서 AAC(audio/mp4) 임베드 호는 2.7MB 여도 거절되고, 같은 내용을
+MP3(audio/mpeg) 로 바꾸자 즉시 공유됐다. 이슈 #14 의 "발행 클라이언트 버전" 가설은
+오진이었다(노트북 실패 호들이 전부 AAC 였던 것). 거절의 실체는
+`PATCH /api/frame/perm/<id>` → 409 `{"reason":"unscannable"}` 이고, 화면 문구
+("This version can't be shared publicly…")는 원인과 무관하다. 거절되면 문구를 옮겨
+적지 말고 그 PATCH 응답 본문을 확인하고, 임베드 MIME 이 audio/mp4 인지부터 보라.
+이식은 `python tools/embed_radio.py <웹판.html> output/audio/YYYY-MM-DD.wav <대본.md>`
+한 번이면 된다 — WAV 를 주면 embed_radio 가 **MP3 변환을 스스로 한다**
+(imageio-ffmpeg — SETUP 2절 선택 의존성). .mp4/.m4a 를 직접 주는 것은 금지다
+(audio/mp4 임베드 = 공유 거절). imageio-ffmpeg 미설치·변환 실패면 경고 후
 WAV 그대로 이식으로 강등된다 — 호가 무거워진 사실을 보고에 남긴다.
+발행·공유 후 `python tools/check_publish.py YYYY-MM-DD` (E6) 로 익명 개통을 판정한다 —
+비공개면 403 이 나와 실패한다 (새 아티팩트는 비공개가 기본값, 08.11 함정).
 
 호 마감 규칙 (2026-08-11 실측 실패에서): 한 호를 닫으면 **산출물 인계 보고
 (아티팩트 링크·PPTX·아카이브 경로)를 먼저 완료**하고, 다음 호 작업은 그 다음에
@@ -361,6 +361,7 @@ python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — �
 python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8·H9(화두 구체성, issue #18) 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 python tools/check_theme.py output/web/YYYY-MM-DD.html     # IG3 연간 주제 정렬 — 마지막 전체검수. eval/theme-날짜.md 에 화두·단신·절·전시물 단위별 정렬/보조/무관 판정 기록이 정본. 화두=정렬 필수, 무관 0건, 검수 메타 언어(규명·표본·주장 강도 등) 지면 0건 (종료코드 0 필수, 2026-08-13 지시 — 비정렬 에피소드는 노이즈, 검수 설명은 지면 오염)
+python tools/check_publish.py YYYY-MM-DD                   # E6 공유 확정 — 발행·공유 완료 뒤에만. 익명 조회로 비공개(403)를 잡는다 (종료코드 0 필수, 2026-08-13 지시 — "항상 전체공유", 발행의 완결 조건은 익명 개통)
 ```
 게이트를 돌리기 **전에** `eval/theme-YYYY-MM-DD.md` 판정표를 먼저 쓴다 — 각 단위가
 연간 주제(profiles spine.annual_theme)와 어떻게 정렬되는지, '보조'는 왜 필요한 토픽인지
@@ -389,7 +390,10 @@ Share → PowerPoint(Universal fonts) 다운로드 → `output/ppt/` 보관. 다
 새 파일(제일기획 아침 브리핑 YYYY-MM-DD)로 만든 뒤** 그 파일에서 갱신한다 —
 새 파일에서 Publish as artifact 하면 새 아티팩트 URL이 나온다. 전일 덱 아티팩트는
 그대로 보존하고 절대 덮어쓰지 않는다. 발행한 URL을 `output/artifact-url-slides-YYYY-MM-DD.txt`에
-기록하고 **당일 웹판 fmtbar의 프레젠테이션 링크에 당일 덱 URL을** 넣는다.
+기록하고 **당일 웹판에 fmtbar 를 달아 프레젠테이션 링크에 당일 덱 URL을** 넣는다.
+(판형 바는 덱 생산 호 전용이다 — 전환할 판형이 하나뿐인 표준·간략 호는 fmtbar 를
+아예 넣지 않는다. 세그먼트 1개짜리 바는 죽은 버튼이라 check_formats 가 실패시킨다,
+2026-08-13 편집장 반려.)
 아카이브 호의 프레젠테이션 탭은 링크 없는 라벨(PPTX 배포본)로 남긴다.
 **덱 아티팩트에도 발행 직후 Share → Anyone with the link 를 켠다** — 웹판만 켜면
 fmtbar 링크가 남에게 404다 (2026-08-11 실측: 발표판이 private 인 채로 남아

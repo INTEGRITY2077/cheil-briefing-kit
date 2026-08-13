@@ -12,8 +12,11 @@
   넣는다" 고 이미 요구하지만, 눈으로만 보면 없는 것을 못 본다.
 
 판정:
-  - `.fmtbar` 가 있어야 한다
-  - 현재 판형(`.fseg.on`) 정확히 1개
+  - 덱이 있는 날만 `.fmtbar` 가 있어야 한다 — 전환할 판형이 하나뿐인 날의
+    판형 바는 죽은 버튼이다 (2026-08-13 편집장 반려: "왜 라디오버전이라는
+    아무 의미없는 버튼이 있음??"). 단일 판형 호는 바 부재가 정상이고,
+    세그먼트 1개짜리 바가 남아 있으면 실패다.
+  - 현재 판형(`.fseg.on`) 정확히 1개 (바가 있는 날만)
   - 프레젠테이션 세그먼트 요구는 **당일 덱 URL 기록 파일이 있는 날만** 건다
     (`output/artifact-url-slides-YYYY-MM-DD.txt` 실존 여부로 판정 —
     routine 4c 는 덱을 '선택, 심층인 날만'으로 규정하므로, 덱을 만들지 않은
@@ -227,11 +230,8 @@ def main():
     html = io.open(args[0], encoding="utf-8").read()
 
     bar = BAR.search(html)
-    if not bar:
-        print("실패: .fmtbar 가 없다 — 판형 바 없이 발행하면 다른 판형으로 갈 문이 없다")
-        sys.exit(1)
-
-    segs = [(tag.lower(), attrs, text_of(body)) for tag, attrs, body in SEG.findall(bar.group(1))]
+    segs = ([(tag.lower(), attrs, text_of(body)) for tag, attrs, body in SEG.findall(bar.group(1))]
+            if bar else [])
     errors, warnings = [], []
 
     # 덱 요구의 정본은 **의도**다 — 루틴이 EVAL 판정(심층=덱 생산)에 따라
@@ -247,13 +247,22 @@ def main():
               f" ({'있음' if deck_expected else '없음'}). 놓친 날과 안 만든 날을 구분하지"
               " 못하는 판정이니 루틴에서는 플래그를 명시하라 (routine 5)")
 
-    min_segs = 2 if deck_expected else 1
-    if len(segs) < min_segs:
-        errors.append(f"세그먼트가 {len(segs)}개다 — 최소 {min_segs}개"
-                      + (" (라디오·프레젠테이션)" if deck_expected else ""))
+    # 판형 바의 존재 조건 — 전환할 판형이 둘 이상인 날(=덱 생산 호)만 (2026-08-13 반려)
+    if deck_expected:
+        if not bar:
+            print("실패: .fmtbar 가 없다 — 덱 생산 호인데 판형 바가 없으면 독자에게 덱은 없는 것과 같다")
+            sys.exit(1)
+        if len(segs) < 2:
+            errors.append(f"세그먼트가 {len(segs)}개다 — 최소 2개 (라디오·프레젠테이션)")
+    else:
+        if bar and len(segs) < 2:
+            errors.append("세그먼트 1개짜리 판형 바 — 전환할 판형이 없으면 죽은 버튼이다. "
+                          "단일 판형 호에서는 fmtbar 블록 자체를 없애라 (2026-08-13 반려)")
+        if not bar:
+            print("안내: 단일 판형 호 — 판형 바 없음이 정상 (덱 생산 호만 바를 단다)")
 
     on = [s for s in segs if re.search(r"\bon\b", s[1])]
-    if len(on) != 1:
+    if bar and len(on) != 1:
         errors.append(f"현재 판형(.fseg.on)이 {len(on)}개 — 정확히 1개여야 한다")
 
     deck = [s for s in segs if any(w in s[2] for w in DECK_WORDS)]
@@ -302,7 +311,10 @@ def main():
     if errors:
         sys.exit(1)
     suffix = " · 익명 개통 확인" if check_links else ""
-    print(f"통과: 판형 세그먼트 {len(segs)}개 · 현재 판형 「{on[0][2]}」 · 링크 전부 유효{suffix}")
+    if bar:
+        print(f"통과: 판형 세그먼트 {len(segs)}개 · 현재 판형 「{on[0][2]}」 · 링크 전부 유효{suffix}")
+    else:
+        print(f"통과: 단일 판형 호 — 판형 바 없음{suffix}")
 
 
 if __name__ == "__main__":

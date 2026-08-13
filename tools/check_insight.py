@@ -23,6 +23,17 @@
                          허용 조건(headline-guard masthead.h1.concreteness, issue #18).
                          비신호어(non_signal)·받는 줄 class 의 정본은 같은 절의
                          static_check — 이 스크립트는 그 값을 읽어 판정만 한다
+  ⑥ Q1   함의 유보 종결 — 축 절의 함의 문장(section[data-axis] 의 마지막 p.note —
+                         규명·표본 줄은 제외)의 마지막 문장이 유보형 종결
+                         ("이후에야"·"에서 드러난다"·"가 재료다"·"쌓여야"류)인 건이
+                         함의 전체의 1/2 를 초과하면 실패. 함의 절반 이상이
+                         「나중에 안다」로 끝나는 지면은 오늘 판단할 것을 내놓지
+                         않은 것이다 (I11 함의 의무의 정적 근사 — 2026-08-13 확장)
+  ⑦ Q2   시한 주장 좌표 — 화두(h1)·스탠드퍼스트(.answer2/.standfirst)에 시한·의무
+                         주장 표지("해야 하는"·"시한이 걸린"·"응답 시한")가 있는데
+                         그 문단 안에 F-\\d{3} 좌표가 없으면 실패. 독자를 움직이는
+                         주장일수록 원장 좌표가 같은 자리에 있어야 한다
+                         (H6 이 숫자에 하는 것을 시한 주장에 한다 — 2026-08-13 확장)
 
 게이트의 정직성 (F5): 판정 대상 마크업이 웹판에 없어 판정 불가한 항목은
 「판정 불가 — 마크업 계약 없음」 경고를 내고 통과시킨다 — 못 재는 것을 재는 척하지 않는다.
@@ -145,6 +156,23 @@ def fact_refs(value):
 
 NUM_UNIT = re.compile(r"\d[\d,]*(?:\.\d+)?(?:만|억|조|%)")
 NUM_COMMA = re.compile(r"\d{1,3}(?:,\d{3})+")
+
+# ── ⑥ Q1 · ⑦ Q2 (2026-08-13 확장) ──────────────────────────────
+# Q1 유보 종결 표지 — "이후에야"·"에서 드러난다"·"가 재료다"·"쌓여야" 류.
+# 활용형을 잡되(드러날다X — 드러난다·드러나기 시작한다, 쌓여야·쌓이기 시작),
+# 넓히지 않는다 — 오탐은 발행을 막는다(H6 과 같은 선택은 미탐 쪽).
+DEFER_END = re.compile(r"이후에야|에서\s*드러난다|[이가]\s*재료다|쌓여야|쌓이기\s*시작")
+# Q2 시한·의무 주장 표지
+DEADLINE_CLAIM = re.compile(r"해야 하는|시한이 걸린|응답 시한")
+FACT_COORD = re.compile(r"[Ff]-\d{3}")
+# 함의가 아닌 p.note — 스켈레톤의 규명·표본 줄 (article-skeleton 축 절 골격)
+NOT_IMPLICATION = re.compile(r"^\s*(?:규명\s*\(|표본\s*—)")
+
+
+def last_sentence(text):
+    """함의 문장의 종결부 — 「다.」 경계로 자른 마지막 문장 (8.11 류 숫자 점은 경계가 아니다)."""
+    parts = [p.strip() for p in re.split(r"(?<=다)[.!?]\s*", text) if p.strip()]
+    return parts[-1] if parts else text.strip()
 
 
 def headline_numbers(text):
@@ -289,6 +317,50 @@ def main():
                               "추상 헤드는 바로 다음 줄이 즉시 구체로 받을 때만 허용 "
                               "(H9 · issue #18 반려 3건째 「받는 줄도 없음」, 받는 줄은 skeleton 계약 요소)")
 
+    # ── ⑥ Q1 함의 유보 종결 — 절반 넘게 「나중에 안다」로 끝나는가 ──
+    # 함의 자리 = 축 절(section[data-axis])의 마지막 p.note (규명·표본 줄 제외).
+    # 함의 마크업 계약이 따로 없어 스켈레톤 골격(축 절 끝 p.note)으로 판정한다.
+    implications = []
+    note_p = re.compile(r'<p\b[^>]*class="(?:[^"]*\s)?note(?:\s[^"]*)?"[^>]*>(.*?)</p>', re.S)
+    for m in re.finditer(r"<section\b[^>]*\bdata-axis\s*=[^>]*>(.*?)</section>", h, re.S):
+        notes = [strip_tags(t).strip() for t in note_p.findall(m.group(1))]
+        notes = [t for t in notes if t and not NOT_IMPLICATION.match(t)]
+        if notes:
+            implications.append(notes[-1])
+    if not axes:
+        warns.append(f"⑥Q1: {CANNOT} ([data-axis] 0건 — 함의 자리를 찾을 수 없다)")
+    elif not implications:
+        warns.append("⑥Q1: 축 절에 함의 p.note 가 0건 — 함의 실존 자체는 I11 사람 판정, 유보 종결 판정 생략")
+    else:
+        deferred = [imp for imp in implications if DEFER_END.search(last_sentence(imp))]
+        print(f"⑥: 함의 {len(implications)}건 · 유보 종결 {len(deferred)}건")
+        if len(deferred) * 2 > len(implications):
+            for imp in deferred:
+                errors.append(f"[함의] 유보 종결 — 「…{last_sentence(imp)[-40:]}」 (Q1)")
+            errors.append(f"함의 {len(implications)}건 중 {len(deferred)}건이 유보 종결 — 1/2 초과 "
+                          "(Q1: 함의 절반 이상이 「나중에 안다」로 끝나면 오늘 판단할 것을 내놓지 않은 지면이다)")
+
+    # ── ⑦ Q2 시한·의무 주장에 원장 좌표가 붙어 있는가 ─────────────
+    q2_spots = []
+    m = re.search(r"<h1\b[^>]*>(.*?)</h1>", h, re.S)
+    if m:
+        q2_spots.append(("화두(h1)", m.group(1)))
+    for m in re.finditer(r'<p\b[^>]*class="(?:[^"]*\s)?(?:answer2|standfirst)(?:\s[^"]*)?"[^>]*>(.*?)</p>', h, re.S):
+        q2_spots.append(("스탠드퍼스트", m.group(1)))
+    if not q2_spots:
+        warns.append(f"⑦Q2: {CANNOT} (h1·.answer2/.standfirst 0건)")
+    else:
+        claimed = 0
+        for where, body in q2_spots:
+            text = strip_tags(body)
+            marks = DEADLINE_CLAIM.findall(text)
+            if marks:
+                claimed += 1
+                if not FACT_COORD.search(body):
+                    errors.append(f"[{where}] 시한·의무 주장 표지({'·'.join(sorted(set(marks)))})가 있는데 "
+                                  "그 문단에 F-### 좌표가 없다 (Q2: 독자를 움직이는 주장에는 원장 좌표를 같은 자리에)")
+        print(f"⑦: 판정 자리 {len(q2_spots)}곳 · 시한 주장 {claimed}곳")
+
     # ── 결과 ──────────────────────────────────────────────────────
     for w in warns:
         print("경고:", w)
@@ -297,7 +369,7 @@ def main():
     print(f"— 축 {len(axes)}개 · 원장 fact {len(fact_ids)}건 · 실패 {len(errors)} · 경고 {len(warns)}")
     if errors:
         sys.exit(1)
-    print("통과: 인사이트·헤드라인 정적 게이트(①·I2·H6·I8·H9) — 판정 불가 항목은 경고에 남겼다 (F5),"
+    print("통과: 인사이트·헤드라인 정적 게이트(①·I2·H6·I8·H9·Q1·Q2) — 판정 불가 항목은 경고에 남겼다 (F5),"
           " 나머지 I·H 게이트는 eval/ 사람 판정")
 
 

@@ -76,6 +76,14 @@ python -c "import json,os,datetime;p='output/ledger/run_log.jsonl';os.makedirs(o
 이 두 줄이 없으면 "안 돈 날"과 "돌았는데 빈손인 날"을 가를 방법이 없다 — 이슈 #9 에서
 남은 증거가 scheduled-task 의 lastRunAt 타임스탬프 하나뿐이었다.
 
+# 0-버전. 최신 정책 위에서만 생산한다 (2026-08-13 창설 — CalVer vYYYY.MM.DD[.N])
+시작 줄 기록 직후, 생산에 들어가기 전에 `python tools/check_version.py` 를 돌린다.
+실패(로컬 ≠ 원격 VERSION)면 **생산을 시작하지 말고** `git pull origin main` 후 재판정한다.
+산출물은 워커마다 독립이지만(다른 워커의 호를 참조·병합하지 않는다 — 유착 금지),
+게이트·템플릿·규정 같은 **정책은 전 워커가 같은 킷 버전 위에서** 생산해야 한다.
+버전 정본은 루트 `VERSION` 한 줄, 변경 내역은 `CHANGELOG.md`. 오프라인·zip 설치본은
+경고로 강등되니 그 사실을 보고에 남긴다.
+
 **산출물 부재 = 실패다.** 루틴을 어떤 이유로든 끝낼 때 오늘자 산출물
 (`output/web/오늘날짜.html`, 또는 quiet_day 라면 run_log 의 `result: quiet_day` 기록)이
 없으면 성공처럼 끝내지 않는다: 종료 줄에 `result: 실패` 와 `reason` 을 쓰고, 보고에도

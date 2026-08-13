@@ -149,6 +149,42 @@ def title_probes(title):
     return probes
 
 
+def published_body(artifact_url):
+    """자기 발행본(독자가 받는 핀 버전)의 HTML 본문을 가져온다. (오류문자열, 본문) 반환.
+
+    이슈 #21 — 게이트가 로컬 파일과 링크 대상만 보고 발행본을 보지 않아,
+    핀이 옛 버전에 남은 채 게이트 전종이 초록이었다 (2026-08-13 실측: V4 를
+    발행하고 핀은 V3 — 독자에게 덱 링크가 없었다).
+    """
+    m = CODE_ARTIFACT.match(artifact_url.strip())
+    if not m:
+        return f"아티팩트 URL 형식이 아니다: {artifact_url[:60]}", None
+    uuid = m.group(1).lower()
+    code, body = fetch_anon(f"https://claude.ai/api/frame/{uuid}?via=user_open",
+                            FRAME_API_HEADERS)
+    if code != 200:
+        return f"발행본 메타 조회 실패(HTTP {code}) — 공유 OFF 또는 없는 아티팩트", None
+    vm = re.search(r'"ver"\s*:\s*"([^"]+)"', body)
+    if not vm:
+        return "발행본 메타에 ver 가 없다 — 응답 형식 변경 의심", None
+    fcode, fbody = fetch_anon(
+        f"https://{uuid}.frame.claudeusercontent.com/_f/{vm.group(1)}")
+    if fcode != 200:
+        return f"발행본 본문 조회 실패(HTTP {fcode})", None
+    return None, fbody
+
+
+def self_artifact_url(html_path):
+    """웹판 HTML 경로에서 당일 아티팩트 URL 기록 파일을 유도해 읽는다. (URL 또는 None)"""
+    date = os.path.splitext(os.path.basename(html_path))[0]
+    p = os.path.join(os.path.dirname(html_path), "..",
+                     f"artifact-url-{date}.txt")
+    if not os.path.exists(p):
+        return None
+    first = io.open(p, encoding="utf-8").read().strip().splitlines()
+    return first[0].strip() if first and first[0].startswith("http") else None
+
+
 def check_link_open(label, url, title):
     """한 링크를 익명으로 열어 ①공유 개통 ②호 제목 포함을 판정. 오류 문자열 또는 None."""
     probes = title_probes(title)
@@ -303,6 +339,29 @@ def main():
                     errors.append(err)
                 else:
                     print(f"링크 개통: [{label}] 익명 200 + 제목 확인")
+
+            # ③ 발행본 대조 — 독자가 받는 핀 버전에 이 링크들이 실려 있는가 (이슈 #21).
+            #    ①로컬 존재 ②개통 만으로는 「V4 를 발행하고 핀은 V3」를 못 잡는다.
+            self_url = self_artifact_url(args[0])
+            if not self_url:
+                errors.append("--check-links 인데 당일 아티팩트 URL 기록"
+                              "(output/artifact-url-날짜.txt)이 없다 — 발행본 대조(③) 불가."
+                              " 발행 절차가 URL 기록을 빠뜨렸다 (이슈 #21)")
+            else:
+                perr, pbody = published_body(self_url)
+                if perr:
+                    errors.append(f"발행본 대조 실패: {perr} (이슈 #21)")
+                else:
+                    if not any(p in pbody for p in title_probes(title)):
+                        errors.append("발행본에 이번 호 제목이 없다 — 핀이 다른 호/옛"
+                                      " 버전에 있다 (이슈 #21)")
+                    for label, url in links:
+                        if url not in pbody:
+                            errors.append(f"[{label}] 링크가 발행본에 없다 — 핀이 옛"
+                                          f" 버전에 있다. 독자에게 이 판형은 없다:"
+                                          f" 공유 버전을 최신 번호로 옮기고 재판정하라 (이슈 #21)")
+                    if not [e for e in errors if "#21" in e]:
+                        print(f"발행본 대조: 핀 버전 본문에 제목 + 링크 {len(links)}개 전부 실림")
 
     for w in warnings:
         print("경고:", w)

@@ -369,7 +369,7 @@ python tools/check_size.py output/web/YYYY-MM-DD.html      # D8 호 크기 — �
 python tools/check_insight.py output/web/YYYY-MM-DD.html   # IG1 인사이트·헤드라인 — 축·I2·H6·I8·H9(화두 구체성, issue #18) 정적 판정, 판정 불가 항목은 경고로 남는다 (종료코드 0 필수, issue #15)
 python tools/check_formats.py output/web/YYYY-MM-DD.html --expect-deck|--no-deck   # C5 판형 바 — EVAL 판정대로 플래그 명시, 덱 URL 반영 뒤 재실행 (종료코드 0 필수)
 python tools/check_theme.py output/web/YYYY-MM-DD.html     # IG3 연간 주제 정렬 — 마지막 전체검수. eval/theme-날짜.md 에 화두·단신·절·전시물 단위별 정렬/보조/무관 판정 기록이 정본. 화두=정렬 필수, 무관 0건, 검수 메타 언어(규명·표본·주장 강도 등) 지면 0건 (종료코드 0 필수, 2026-08-13 지시 — 비정렬 에피소드는 노이즈, 검수 설명은 지면 오염)
-python tools/check_publish.py YYYY-MM-DD                   # E6 공유 확정 — 발행·공유 완료 뒤에만. 익명 조회로 비공개(403)를 잡는다 (종료코드 0 필수, 2026-08-13 지시 — "항상 전체공유", 발행의 완결 조건은 익명 개통)
+python tools/check_publish.py YYYY-MM-DD                   # E6 공유 확정 — 발행·공유 완료 뒤에만. api/frame 직접 판정(200+public, 무작위 uuid 대조군 자기검증) + 발행본 본문에 오늘 호 h1 대조 — 핀이 옛 버전·다른 호면 실패 (종료코드 0 필수, 이슈 #21 — 게이트는 발행본을 직접 본다. check_formats --check-links 도 링크의 발행본 실림(③)까지 판정한다)
 ```
 게이트를 돌리기 **전에** `eval/theme-YYYY-MM-DD.md` 판정표를 먼저 쓴다 — 각 단위가
 연간 주제(profiles spine.annual_theme)와 어떻게 정렬되는지, '보조'는 왜 필요한 토픽인지

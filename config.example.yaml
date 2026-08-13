@@ -86,7 +86,7 @@ tts:
   # ("This version can't be shared publicly…")는 원인과 무관하다. publish-checklist E5 참조.
   # 아래 max_html_mb 는 검증된 임계가 아니라 **편집 규율**이다 — 통과해도 공유가 보장되지 않는다.
   embed:
-    bitrate: 64k        # AAC 비트레이트. 낭독은 64k 모노로 충분하다
+    bitrate: 48k        # AAC 비트레이트. 낭독은 48k 모노로 충분하다 — 64k는 대본이 길어진 날(11줄·170초대) 호 상한 3MB를 넘긴 실측(2026-08-13)
     channels: 1         # 1인 낭독이 표준이라 모노
     max_html_mb: 3.0    # 웹판 상한. tools/check_size.py 가 판정한다 (D8)
 

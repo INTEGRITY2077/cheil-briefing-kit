@@ -5,6 +5,10 @@
 사용: python tools/sync_skill.py <마스터SKILL경로>
 출력: 킷 루트의 routine-SKILL.md (고정)
 
+검사만: python tools/sync_skill.py --check <마스터SKILL경로>
+  치환·누출 검사를 전부 돌리되 **routine-SKILL.md 를 쓰지 않는다** (2026-08-14
+  이슈 #31 — dry-run 이 없어 검사만 하고 싶을 때도 덮어쓰기가 강제됐다).
+
 역방향 판정: python tools/sync_skill.py --verify-installed <설치본경로>
   "이 파일이 설치본인가"를 판정한다 — 「# 킷 위치」 절 **안에만** {{KIT_ROOT}}
   가 남아 있는지 본다. 다른 절(예: 저장소 동기화 절)의 정당한 언급은 무시한다.
@@ -26,6 +30,7 @@ for _s in (sys.stdout, sys.stderr):
         _s.reconfigure(encoding="utf-8")  # cp949 콘솔에서도 죽지 않게 (stderr 포함 — USAGE 모지바케 방지)
 
 USAGE = ("사용법: python tools/sync_skill.py <마스터SKILL경로>\n"
+         "       python tools/sync_skill.py --check <마스터SKILL경로>   (검사만 — 쓰지 않음)\n"
          "       python tools/sync_skill.py --verify-installed <설치본경로>")
 
 HEADING = "# 킷 위치"
@@ -43,6 +48,11 @@ LEAK_PATTERNS = [
     (re.compile(r"[A-Za-z]:\\"), "드라이브 문자 절대경로 (예: X:\\...)"),
     (re.compile(r"[/\\]Users[/\\]"), "사용자 홈 경로 (.../Users/...)"),
     (re.compile(r"%USERPROFILE%|\$HOME|~[/\\]", re.I), "홈 디렉토리 참조"),
+    # 유닉스 절대경로 (2026-08-14 이슈 #31 — 종전 패턴이 Windows 중심이라 리눅스
+    # 원작 환경의 /home/<계정> 류 누출이 exit 0 통과했다(실측). URL 경로 속의
+    # host/home/… 은 앞 문자가 단어 문자라 lookbehind 로 제외된다)
+    (re.compile(r"(?<![\w.\-])/(?:home|root|mnt|media|srv)/[A-Za-z0-9._\-]+"),
+     "유닉스 절대경로 (/home·/root·/mnt/...)"),
 ]
 
 
@@ -113,9 +123,11 @@ def main():
             sys.exit(USAGE)
         verify_installed(sys.argv[2])
         return
-    if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
+    check_only = len(sys.argv) >= 2 and sys.argv[1] == "--check"
+    args = sys.argv[2:] if check_only else sys.argv[1:]
+    if not args or not os.path.exists(args[0]):
         sys.exit(USAGE)
-    master = sys.argv[1]
+    master = args[0]
     kit_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dest = os.path.join(kit_root, "routine-SKILL.md")
 
@@ -129,6 +141,10 @@ def main():
             print(f"  {n}행 [{why}] {line}")
         sys.exit(1)
 
+    if check_only:
+        print(f"통과(검사만): 치환·누출 검사 이상 없음 ({len(result.splitlines())}줄) — "
+              "routine-SKILL.md 는 쓰지 않았다 (--check, 이슈 #31)")
+        return
     io.open(dest, "w", encoding="utf-8", newline="\n").write(result)
     print(f"통과: {dest} 재생성 ({len(result.splitlines())}줄, 플레이스홀더 블록 유지)")
 

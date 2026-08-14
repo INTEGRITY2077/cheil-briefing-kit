@@ -17,11 +17,15 @@
 | 항목 | 값 |
 |---|---|
 | 호 날짜 | YYYY-MM-DD |
-| 심사 대상 파일 | output/…/<웹판>.html |
+| 심사 대상 파일 | eval/proto-YYYY-MM-DD.md |
 | 루브릭 버전 | insight-rubric.yaml v2 |
 
 이 「루브릭 버전」 행이 check_review 차원 전수의 스코프다 — v1 로 적힌 기존 기록은
 R1~R5 5차원으로, v2 기록은 R6 포함 6차원으로 판정받는다 (버전 스코핑).
+**심사 대상의 정본은 중도금 뼈대 MD 다** (pipeline-three-stage ②·IG4) — 종전 양식이
+웹판을 지시해 정본 선언과 상충하던 것을 정정했다 (2026-08-14, 이슈 #26).
+check_review 가 이 행을 호 날짜와 대조한다: 비소급 심사는 `eval/proto-<날짜>.md`,
+소급 심사(--retro)만 발행본 `output/web/<날짜>.html` 을 적는다.
 
 ## 심사자별 채점
 

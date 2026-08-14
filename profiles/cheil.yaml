@@ -172,6 +172,38 @@ sources:
     last_checked: 2026-08-12
     last_item: "2026-08-06 WPP 2026 Interim Results (F-020). 이후 신규 없음"
 
+  # 세계 층 상시 수집원 (2026-08-14 편입, 이슈 #28) — F-050~055 세계 스윕의 출처
+  # 층을 1회성에서 상시로 승격. 큰축 MA2·MA3 의 세계 좌표는 이 두 소스가 먹인다.
+  # 수집 전 okf/axes.md 각 축의 「구멍」·「검증 지점」을 오늘의 과제로 먼저 읽는다.
+  - id: global-demand
+    tier: T2
+    name: 글로벌 광고주 수요측
+    url:
+      - https://www.unilever.com/news/
+      - https://www.pginvestor.com/
+      - https://www.loreal-finance.com/
+      - https://investors.coca-colacompany.com/
+    method: |
+      세계 최대급 광고주의 실적 발표·공식 뉴스룸에서 대행사 지출·인하우스·AI 배분
+      발언을 뽑는다 (F-053·F-054 계열). 실적 시즌(분기)에 집중, 평시는 신규분만.
+      공식 원문(실적 보도자료·콜 자료)은 T1 로 승격해 센다 (eval-rubric 세계 층 매핑).
+    last_checked: 2026-08-14
+    last_item: "2026-08 유니레버 소셜 퍼스트 공식화 (F-054)"
+
+  - id: ai-ad-supply
+    tier: T2
+    name: AI 지면 공급측·조사
+    url:
+      - https://openai.com/news/
+      - https://www.emarketer.com/
+      - https://www.adexchanger.com/
+    method: |
+      AI 광고 상품·매출·광고주 채택의 공급측 실측 (F-050~052 계열). 플랫폼 공식
+      발표는 T1, 조사기관·해외 업계지 보도는 T2. 원문 확인 없으면 등재 금지
+      (routine 1절 Verify 단계 동일 적용).
+    last_checked: 2026-08-14
+    last_item: "2026-07 AdExchanger AI 미디어 스케일 기고 (F-050)"
+
   - id: own-magazine
     tier: T3
     name: 제일 매거진 Insight

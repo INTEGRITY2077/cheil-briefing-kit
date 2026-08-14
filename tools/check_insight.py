@@ -7,7 +7,8 @@
 이 스크립트는 그 값(축당 양쪽 사실 하한, must_be_in_ledger)을 읽어 판정만 한다.
 원장은 okf/facts/*.md (status: deprecated 제외) — 배포본에 실리는 사실 미러이고
 그 정합은 check_ledger(D7)가 보증한다. issue #15 가 「정적 판정 가능」이라고
-특정한 4개만 구현한다:
+특정한 4개(①~④)에서 출발해 지금은 아홉을 본다 (⑤ issue #18 · ⑥⑦ 2026-08-13 확장 ·
+⑧⑨ 2026-08-14 이슈 #25·#30):
 
   ①      축 개수 >=1   — 축 마크업([data-axis])이 문서에 하나 이상 있는가
   ② I2   양쪽 사실>=2  — 축마다 data-side-a / data-side-b 의 F-ID 가 각각
@@ -26,14 +27,24 @@
   ⑥ Q1   함의 유보 종결 — 축 절의 함의 문장(section[data-axis] 의 마지막 p.note —
                          규명·표본 줄은 제외)의 마지막 문장이 유보형 종결
                          ("이후에야"·"에서 드러난다"·"가 재료다"·"쌓여야"류)인 건이
-                         함의 전체의 1/2 를 초과하면 실패. 함의 절반 이상이
-                         「나중에 안다」로 끝나는 지면은 오늘 판단할 것을 내놓지
+                         함의 전체의 1/2 를 **초과**하면 실패(정확히 절반은 통과 —
+                         이슈 #31 문구 통일). 함의 절반을 넘게
+                         「나중에 안다」로 끝내는 지면은 오늘 판단할 것을 내놓지
                          않은 것이다 (I11 함의 의무의 정적 근사 — 2026-08-13 확장)
   ⑦ Q2   시한 주장 좌표 — 화두(h1)·스탠드퍼스트(.answer2/.standfirst)에 시한·의무
                          주장 표지("해야 하는"·"시한이 걸린"·"응답 시한")가 있는데
                          그 문단 안에 F-\\d{3} 좌표가 없으면 실패. 독자를 움직이는
                          주장일수록 원장 좌표가 같은 자리에 있어야 한다
                          (H6 이 숫자에 하는 것을 시한 주장에 한다 — 2026-08-13 확장)
+  ⑧      발행본 좌표 실존 — 발행본이 참조하는 F-### 전수가 okf/facts/ 에 파일로
+                         실존하는가 (매달린 좌표 0건 — 지어낸 좌표는 담보가 아니다.
+                         Q2 가 좌표 표기만 보고 실존을 안 봐 (F-999) 가 통과하던
+                         이슈 #25 수리). deprecated 좌표 참조는 경고
+  ⑨      뼈대 배신 대조 — eval/proto-<날짜>.md(중도금 뼈대)가 있으면 그 화두(###)와
+                         함의(**함의** — …) 문장이 지면에 보존됐는지 정규화 문자열로
+                         대조한다 (편집 3단 잔금의 유일한 정성 질문 「조판이 뼈대를
+                         배신했는가」의 최소 기계화 — 이슈 #30). 뼈대가 없으면 경고
+                         (소급·구판 호), 자리표시자([[)면 그 항목 생략
 
 게이트의 정직성 (F5): 판정 대상 마크업이 웹판에 없어 판정 불가한 항목은
 「판정 불가 — 마크업 계약 없음」 경고를 내고 통과시킨다 — 못 재는 것을 재는 척하지 않는다.
@@ -338,7 +349,7 @@ def main():
             for imp in deferred:
                 errors.append(f"[함의] 유보 종결 — 「…{last_sentence(imp)[-40:]}」 (Q1)")
             errors.append(f"함의 {len(implications)}건 중 {len(deferred)}건이 유보 종결 — 1/2 초과 "
-                          "(Q1: 함의 절반 이상이 「나중에 안다」로 끝나면 오늘 판단할 것을 내놓지 않은 지면이다)")
+                          "(Q1: 함의 절반을 넘게 「나중에 안다」로 끝내면 오늘 판단할 것을 내놓지 않은 지면이다)")
 
     # ── ⑦ Q2 시한·의무 주장에 원장 좌표가 붙어 있는가 ─────────────
     q2_spots = []
@@ -361,6 +372,66 @@ def main():
                                   "그 문단에 F-### 좌표가 없다 (Q2: 독자를 움직이는 주장에는 원장 좌표를 같은 자리에)")
         print(f"⑦: 판정 자리 {len(q2_spots)}곳 · 시한 주장 {claimed}곳")
 
+    # ── ⑧ 발행본 좌표 실존 — 매달린 좌표 0건 (이슈 #25) ───────────
+    # Q2 는 좌표 표기의 유무만 봤다 — 실존 대조가 없어 지어낸 (F-999) 가 통과했고,
+    # check_ledger 는 okf 미러만 보고 발행 HTML 을 안 본다. I2/I8 의 「매달린 참조」
+    # 규칙을 발행본 전수로 확장한다. 대조는 파일 실존(상태 불문) — deprecated 는 경고.
+    page_refs = sorted({m.lower() for m in re.findall(r"[Ff]-\d{3}(?:-[xX])?", h)})
+    dangling, dep_used = [], []
+    for rid in page_refs:
+        fp = os.path.join(FACTS_DIR, rid + ".md")
+        if not os.path.exists(fp):
+            dangling.append(rid.upper())
+        elif re.search(r"^status:\s*deprecated\s*$", io.open(fp, encoding="utf-8").read(), re.M):
+            dep_used.append(rid.upper())
+    for rid in dangling:
+        errors.append(f"발행본이 참조하는 {rid} 가 okf/facts/ 에 없다 (⑧ 매달린 좌표 — "
+                      "지어낸 좌표는 담보가 아니다, 이슈 #25)")
+    if dep_used:
+        warns.append("⑧: 발행본이 대체된(deprecated) 좌표를 참조한다 — "
+                     + ", ".join(dep_used) + " (supersede 후속 반영 여부 확인)")
+    print(f"⑧: 발행본 F-좌표 {len(page_refs)}건 · 매달림 {len(dangling)}건")
+
+    # ── ⑨ 뼈대 배신 대조 — 화두·함의 문장의 보존 (이슈 #30) ───────
+    # 편집 3단 잔금의 유일한 정성 질문 「조판이 뼈대를 배신했는가」의 최소 기계화.
+    # 뼈대(eval/proto-<날짜>.md — 로컬 운영 산출물)가 있으면 화두(###)와 함의 첫
+    # 문장이 지면에 남았는지 정규화 문자열(공백·기호 제거)로 대조한다. 좌표
+    # 병기 (F-###) 는 조판에서 자리가 바뀔 수 있어 대조 전에 벗긴다.
+    base = os.path.splitext(os.path.basename(path))[0]
+    proto_path = os.path.join(KIT_ROOT, "eval", f"proto-{base}.md")
+    norm = lambda s: re.sub(r"[^0-9A-Za-z가-힣]", "", s)
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", base):
+        warns.append("⑨: 파일명이 날짜형이 아니라 뼈대(eval/proto-)를 찾을 수 없다 — 배신 대조 생략")
+    elif not os.path.exists(proto_path):
+        warns.append(f"⑨: 뼈대 없음(eval/proto-{base}.md) — 배신 대조 생략 "
+                     "(편집 3단 미준수 또는 소급·구판 호 — 3b 를 거쳤다면 뼈대가 있어야 한다)")
+    else:
+        ptext = io.open(proto_path, encoding="utf-8").read()
+        hnorm = norm(h)
+        needles = []
+        mh = re.search(r"^###\s+(.+)$", ptext, re.M)
+        if mh:
+            needles.append(("화두", mh.group(1)))
+        for m in re.finditer(r"^\*\*함의\*\*\s*[—-]\s*(.+)$", ptext, re.M):
+            needles.append(("함의", re.split(r"(?<=[다라])\.", m.group(1))[0]))
+        if not needles:
+            warns.append("⑨: 뼈대에서 화두(###)·함의(**함의** —) 표지를 찾지 못했다 — "
+                         "templates/proto-skeleton.md 판형 확인")
+        n_checked = 0
+        for kind, needle in needles:
+            if "[[" in needle:
+                warns.append(f"⑨: 뼈대 {kind} 가 자리표시자([[)다 — 그 항목 대조 생략")
+                continue
+            nn = norm(re.sub(r"\([Ff]-\d{3}[^)]*\)", "", needle))
+            if not nn:
+                continue
+            n_checked += 1
+            if nn not in hnorm:
+                errors.append(f"[{kind}] 뼈대 문장이 지면에 없다 — 「{needle[:50]}」 "
+                              "(⑨ 조판이 뼈대를 배신했는가 — 배신 수리는 조판 몫, "
+                              "뼈대를 고치려면 ②로 회귀한다. pipeline-three-stage ③·이슈 #30)")
+        print(f"⑨: 뼈대 대조 {n_checked}건 (eval/proto-{base}.md)")
+
     # ── 결과 ──────────────────────────────────────────────────────
     for w in warns:
         print("경고:", w)
@@ -369,8 +440,8 @@ def main():
     print(f"— 축 {len(axes)}개 · 원장 fact {len(fact_ids)}건 · 실패 {len(errors)} · 경고 {len(warns)}")
     if errors:
         sys.exit(1)
-    print("통과: 인사이트·헤드라인 정적 게이트(①·I2·H6·I8·H9·Q1·Q2) — 판정 불가 항목은 경고에 남겼다 (F5),"
-          " 나머지 I·H 게이트는 eval/ 사람 판정")
+    print("통과: 인사이트·헤드라인 정적 게이트(①·I2·H6·I8·H9·Q1·Q2·좌표실존·뼈대대조) — "
+          "판정 불가 항목은 경고에 남겼다 (F5), 나머지 I·H 게이트는 eval/ 사람 판정")
 
 
 if __name__ == "__main__":

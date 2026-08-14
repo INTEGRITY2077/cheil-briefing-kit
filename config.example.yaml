@@ -50,8 +50,10 @@ profile: cheil
 execution:
   workflow_available: null   # 설치 시 헬스체크가 기록 (true/false) — SETUP 0-2
   stages:
-    collect_sweep: workflow  # 1절 소스 수집 — 채널 7종 병렬 스윕
+    collect_sweep: workflow  # 1절 소스 수집 — 채널별 병렬 스윕 (국내 + 세계 층)
     fact_verify:   workflow  # 1절 검증 — 채택 후보별 팩트체커 병렬
+    review_panel:  workflow  # 3b② 중도금 정성 심사 — 3렌즈 독립 채점 팬아웃, 서로 기록
+                             # 비공개 (templates/review-prompts.md 정본, 이슈 #29)
     compose:       serial    # 4절 대본·웹판 집필 — 단일 편집 맥락, 병렬 이득 없음
     gates:         serial    # 5절 check_*.py — 수 초짜리 순차, 병렬 불요
     publish:       serial    # 4b 발행→공유→핀 — 순서 의존, 병렬 금지

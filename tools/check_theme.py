@@ -21,6 +21,11 @@
                        「규명(」·「표본 —」·「주장 강도」·「보류 슬롯」·「게이트」·「검수」·
                        「판정 불가」 가 1건도 없어야 한다(검수 설명을 지면에 늘어놓지 않는다)
 
+  ⑤ data-macro lint   — (2026-08-14 이슈 #27) 절이 선언한 소속 큰축(data-macro)이
+                       profiles macro_axes 의 실존 id 인지 형식만 본다 — 오타(M2A)·
+                       비실존 ID 차단. 선언 부재는 실패가 아니다(IG5 무소속=필요성
+                       재평가는 사람 판정), 소속의 적절성도 사람 몫이다
+
 게이트의 정직성(F5): 이 스크립트는 판정표의 **존재·형식·전수·무관 0**만 본다.
 각 판정이 옳은지(요지가 주제와 실제로 정렬/보조인지)는 eval 원본의 사람 판정이다.
 """
@@ -67,6 +72,18 @@ def load_annual_theme():
         print("실패: annual_theme 이 비어 있다 — 연간 주제 없이는 정렬 판정 불가 (profiles/cheil.yaml spine.windows[year])")
         sys.exit(1)
     return str(theme).strip()
+
+
+def load_macro_ids():
+    """profiles macro_axes 의 id 목록 — data-macro lint(⑤)의 정본. 절이 없으면 None."""
+    try:
+        import yaml
+        data = yaml.safe_load(io.open(PROFILE, encoding="utf-8").read())
+        axes = data.get("macro_axes") or []
+        ids = [str(a.get("id")) for a in axes if isinstance(a, dict) and a.get("id")]
+        return ids or None
+    except Exception:
+        return None
 
 
 def strip_visible(html):
@@ -174,6 +191,20 @@ def main():
         shown = ", ".join(t.replace("—", "—") for t in hits)
         errors.append(f"검수 메타 언어가 지면에 남아 있다 — 「{shown}」 (편집장 지시 ③: 검수 설명은 출판물 오염)")
     print(f"④: 검수 메타 스윕 — 매치 {len(hits)}건")
+
+    # ── ⑤ data-macro 소속 선언 lint (이슈 #27) ────────────────────
+    # IG5 의 판정(무소속=재평가·소속의 적절성)은 사람 몫 — 여기는 값의 실존 형식만.
+    macro_ids = load_macro_ids()
+    declared = [d.strip() for d in re.findall(r'data-macro\s*=\s*"([^"]*)"', html)]
+    if macro_ids is None:
+        if declared:
+            print("경고: profiles 에 macro_axes 가 없어 data-macro 값 대조를 생략한다 (⑤)")
+    else:
+        bad = [d for d in declared if d and d not in macro_ids]
+        for d in bad:
+            errors.append(f"data-macro=\"{d}\" 가 profiles macro_axes 의 id({'·'.join(macro_ids)})에 없다 "
+                          "(⑤ IG5 형식 lint — 오타·비실존 큰축 선언은 장부에 안 쌓인다, 이슈 #27)")
+        print(f"⑤: data-macro 선언 {len(declared)}건 · 비실존 {len(bad)}건")
 
     # ── 결과 ──────────────────────────────────────────────────────
     for e in errors:

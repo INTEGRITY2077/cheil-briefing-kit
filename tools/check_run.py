@@ -20,7 +20,12 @@ run_log(output/ledger/run_log.jsonl)의 해당 날짜 항목과 산출물 실존
 
   통과(0)  산출물 실존 + 게이트 기록 — output/web/<날짜>.html 이 있고,
            종료 줄의 gates 필드에 실행한 기계 게이트 목록이 있다
-           (run_log 항목 자체가 없으면 경고를 내되 실체가 있으므로 통과)
+           (run_log 항목 자체가 없으면 경고를 내되 실체가 있으므로 통과).
+           목록은 **로스터 대조**다 (2026-08-14 이슈 #24) — 정본은
+           templates/publish-checklist.md 의 ```required-gates``` 블록.
+           로스터 게이트가 목록에서 빠졌거나 종료코드가 :0 이 아니면 실패 —
+           종전의 「비어 있지 않음」 판정은 한 줄짜리 자기 보고로 뚫렸다(우회 실측).
+           로스터 블록을 못 읽으면 경고 후 종전 판정으로 강등한다 (F5)
   통과(0)  quiet_day — run_log 에 result: quiet_day 항목이 있다
   실패(1)  게이트 기록 없는 발행 — 산출물은 있는데 해당 날짜 종료 줄의
            gates 필드가 없거나 비어 있다 (이슈 #18: 게이트를 건너뛴 발행)
@@ -39,7 +44,7 @@ run_log.jsonl 한 줄 형식 (루틴 SKILL 「실행 원장」 절이 정본):
 
 정적 검사라 네트워크 없이 돌릴 수 있다. 실패 시 종료코드 1.
 """
-import io, json, os, sys
+import io, json, os, re, sys
 from datetime import date
 
 for _s in (sys.stdout, sys.stderr):
@@ -77,6 +82,21 @@ def parse_args(argv):
     if kit_root is None:
         kit_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return target, kit_root
+
+
+def load_roster(kit_root):
+    """publish-checklist 의 ```required-gates``` 블록에서 필수 게이트 이름을 읽는다.
+
+    (로스터 정본 신설 — 이슈 #24. 못 읽으면 None → 종전 판정으로 강등 + 경고.)
+    """
+    path = os.path.join(kit_root, "templates", "publish-checklist.md")
+    if not os.path.exists(path):
+        return None
+    m = re.search(r"```required-gates\n(.*?)```", io.open(path, encoding="utf-8").read(), re.S)
+    if not m:
+        return None
+    names = [ln.strip() for ln in m.group(1).splitlines() if ln.strip()]
+    return names or None
 
 
 def load_entries(run_log, target):
@@ -136,7 +156,30 @@ def main():
                   '"gates":["check_tables:0",...] 형식으로 기록하라')
             return 1
         n, o = gated[-1]
-        print(f"통과: 오늘자 산출물이 실존하고 게이트 기록이 있다 "
+        # 로스터 대조 (이슈 #24) — 필수 게이트 전수가 :0 으로 기록됐는가
+        roster = load_roster(kit_root)
+        if roster is None:
+            print("경고: publish-checklist 의 required-gates 로스터를 읽지 못했다 — "
+                  "목록 완전성 대조를 생략하고 「비어 있지 않음」만 판정한다 (이슈 #24)")
+        else:
+            recorded = {}
+            for g in o["gates"]:
+                name, _, code = str(g).partition(":")
+                recorded[name.strip()] = code.strip()
+            missing = [r for r in roster if r not in recorded]
+            nonzero = [r for r in roster if recorded.get(r) not in (None, "0")]
+            if missing:
+                print("실패: 게이트 기록이 로스터에 미달한다 — 빠진 게이트: "
+                      + ", ".join(missing)
+                      + " (이슈 #24 — 목록 한 줄로 나머지를 건너뛴 발행은 게이트를 돌린 발행이 아니다. "
+                      "로스터 정본: templates/publish-checklist.md required-gates)")
+                return 1
+            if nonzero:
+                print("실패: 로스터 게이트의 종료코드가 0 이 아니다 — "
+                      + ", ".join(f"{r}:{recorded[r]}" for r in nonzero)
+                      + " (실패한 게이트를 기록한 채 발행했다)")
+                return 1
+        print(f"통과: 오늘자 산출물이 실존하고 게이트 기록이 로스터 전수와 일치한다 "
               f"({n}행 gates={o['gates']})")
         return 0
 

@@ -106,8 +106,9 @@ https://github.com/INTEGRITY2077/cheil-briefing-kit 를 읽고 SETUP.md 대로 �
 ## 지원 OS
 
 Windows · macOS · Linux — Claude Code가 도는 곳이면 어디든. 도구와 의존성은 전부
-크로스플랫폼입니다. **실측 검증은 Windows 11에서 완료**됐고 macOS/Linux는 미실측이니,
-설치 중 막히는 지점이 있으면 이슈로 남겨 주세요. (config의 `sapi` 엔진만 Windows 전용
+크로스플랫폼입니다. **실측 검증: Windows 11 완료 · macOS(Apple Silicon, python 3.9) 완료**
+(2026-08-14 맥미니 실측 — selftest·TTS·게이트 전종). Linux는 미실측이니 설치 중 막히는
+지점이 있으면 이슈로 남겨 주세요. (config의 `sapi` 엔진만 Windows 전용
 옵션이며 기본 사다리에는 포함되지 않습니다.)
 
 ## 주의

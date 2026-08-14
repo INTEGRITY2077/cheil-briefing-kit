@@ -307,6 +307,22 @@ def main():
             for r in refs:
                 if r not in fact_ids:
                     errors.append(f"화두 칸 [근거] 의 {r.upper()} 가 okf/facts/ 에 없다 (매달린 참조)")
+        # ⑩ I8b 칸 자립성 — 각 칸은 배경지식 없이 단독 완결 (2026-08-14 편집장 반려:
+        #    「부호가 반대다/값은 …에 붙는다/F-055 — …」 — 지시 대상이 칸 밖에 있고
+        #    근거 칸이 좌표 나열이었다). 기계가 잴 수 있는 최소 판정 둘:
+        #    근거 칸은 F-ID 를 걷어낸 뒤에도 한국어 서술 종결(…다)이 남아야 하고,
+        #    결론·발견 칸은 공백 제외 12자 미만의 압축 단문이면 지시어 의존 의심으로 실패.
+        if cells.get("근거"):
+            prose = re.sub(r"[Ff]-\d{3}", "", cells["근거"])
+            prose = re.sub(r"[\s·—\-()·,+%$£₹\d.]+", " ", prose).strip()
+            if not re.search(r"다(?![가-힣])", prose) or len(prose) < 10:
+                errors.append("화두 칸 [근거] 가 좌표 나열이다 — 사람 문장으로 쓰고 F-ID 는 괄호 병기"
+                              " (I8b 칸 자립성, 2026-08-14 반려)")
+        for cell in ("결론",):
+            t = cells.get(cell, "")
+            if t and len(re.sub(r"\s", "", t)) < 12:
+                errors.append(f"화두 칸 [{cell}] 「{t}」 — 배경지식 없이 읽히지 않는 압축 단문 의심"
+                              f" (I8b: 칸은 단독 완결 — 지시어(부호·값 등)의 대상이 칸 안에 있어야 한다)")
 
     # ── ⑤ H9 화두 구체성 — 추상 헤드는 받는 줄이 즉시 구체로 받는가 ──
     if conc:

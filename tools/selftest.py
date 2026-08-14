@@ -72,6 +72,16 @@ PAGE = """<h1>광고 자본은 GPT로 움직이는가 — 답의 한 조각이 �
 <p class="note">담당 캠페인의 챗GPT 픽셀 설치 여부를 8월 17일 전에 확인하라</p>
 </section>"""
 
+SPINE_OK = PAGE + (
+    '<div><b data-spine="결론">세계 광고회사의 전환은 보상을 받기 시작했다</b>'
+    '<b data-spine="발견">보상은 계량된 전환에 붙었다</b>'
+    '<p data-spine="근거">유료 미디어 투자가 크게 늘었다(F-038) — 픽셀 확인 시한이 다가온다(F-042)</p></div>')
+
+SPINE_LIST = PAGE + (
+    '<div><b data-spine="결론">부호가 반대다</b>'
+    '<b data-spine="발견">값은 전환에 붙는다</b>'
+    '<p data-spine="근거">F-038 — 벤치마크 · F-042 — 픽셀</p></div>')
+
 PROTO = """# 오늘의 제일기획 뉴스 — {date}
 
 ## 오늘의 화두
@@ -140,6 +150,8 @@ def main():
 
         # check_insight — 정상 / 뼈대 배신 / 가짜 좌표
         w(j("output", "web", "2026-08-30.html"), PAGE)
+        w(j("output", "web", "2026-09-05.html"), SPINE_OK)
+        w(j("output", "web", "2026-09-06.html"), SPINE_LIST)
         w(j("eval", "proto-2026-08-30.md"), PROTO.format(date="2026.08.30"))
         w(j("output", "web", "2026-08-31.html"),
           PAGE.replace("광고 자본은 GPT로 움직이는가 — 답의 한 조각이 우리 손에 있다",
@@ -196,6 +208,10 @@ def main():
              ["output/web/2026-08-25.html", "--retro"], 0, None, None),
             ("insight 정상 — 좌표 실존·뼈대 일치", "check_insight.py",
              ["output/web/2026-08-30.html"], 0, None, None),
+            ("insight 화두 칸 자립 — 사람 문장 + 좌표 병기 (I8b)", "check_insight.py",
+             ["output/web/2026-09-05.html"], 0, None, None),
+            ("insight 화두 칸 좌표 나열·지시어 단문 (I8b 차단)", "check_insight.py",
+             ["output/web/2026-09-06.html"], 1, None, None),
             ("insight 뼈대 배신 — 화두 실종", "check_insight.py",
              ["output/web/2026-08-31.html"], 1, None, None),
             ("insight 가짜 좌표 (F-999)", "check_insight.py",
@@ -232,7 +248,8 @@ def main():
                 setup()
             try:
                 r = subprocess.run([sys.executable, j("tools", tool)] + args,
-                                   capture_output=True, text=True, cwd=tmp)
+                                   capture_output=True, text=True, cwd=tmp,
+                                   encoding="utf-8", errors="replace")
                 got = r.returncode
             finally:
                 if teardown:

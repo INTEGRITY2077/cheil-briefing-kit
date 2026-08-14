@@ -186,7 +186,7 @@ def load_dimensions(warns):
     """
     if not os.path.exists(RUBRIC):
         warns.append("templates/insight-rubric.yaml 이 없다 — 차원 이름 대조 생략, 행 수로만 판정")
-        return None, None
+        return None, None, None
     try:
         import yaml
         with io.open(RUBRIC, encoding="utf-8") as f:
@@ -197,6 +197,7 @@ def load_dimensions(warns):
             dims = _find_list(y, key)
             if dims:
                 names = []
+                id_map = {}
                 for d in dims:
                     if isinstance(d, str):
                         names.append((d, 1))
@@ -204,13 +205,15 @@ def load_dimensions(warns):
                         for nk in ("name", "id", "이름", "차원"):
                             if d.get(nk):
                                 names.append((str(d[nk]), int(d.get("since") or 1)))
+                                if d.get("id"):
+                                    id_map[str(d["id"])] = str(d[nk])
                                 break
                 if len(names) == len(dims):
-                    return names, ver
+                    return names, ver, id_map
         warns.append("rubric 에서 차원 목록(dimensions)을 찾지 못했다 — 행 수로만 판정")
     except Exception:
         warns.append("rubric 을 읽지 못했다 — 차원 이름 대조 생략, 행 수로만 판정")
-    return None, None
+    return None, None, None
 
 
 def load_panel(warns):
@@ -226,9 +229,10 @@ def load_panel(warns):
             y = yaml.safe_load(f) or {}
         panel = _find_list(y, "panel")
         if panel:
-            lenses = [(str(p.get("id") or ""), str(p.get("name") or ""))
+            lenses = [(str(p.get("id") or ""), str(p.get("name") or ""),
+                       [str(x) for x in p.get("scored_dims")] if p.get("scored_dims") else None)
                       for p in panel if isinstance(p, dict)]
-            if lenses and all(i for i, _ in lenses):
+            if lenses and all(i for i, _, _ in lenses):
                 return lenses
         warns.append("rubric 에서 panel(렌즈 목록)을 찾지 못했다 — 렌즈 정체성은 제목 중복 검사로만 판정")
     except Exception:
@@ -246,8 +250,9 @@ def check_lenses(reviewers, lenses, label, errors):
         matched = {}
         for r in reviewers:
             low = r.lower()
-            hit = [lid for lid, lname in lenses
-                   if lid.lower() in low or (lname and lname in r)]
+            hit = [lid for lid, _ln, _sd in lenses if lid.lower() in low]
+            if not hit:
+                hit = [lid for lid, lname, _sd in lenses if lname and lname in r]
             if len(hit) == 1:
                 matched.setdefault(hit[0], []).append(r)
             elif not hit:
@@ -255,7 +260,7 @@ def check_lenses(reviewers, lenses, label, errors):
                               "(② 렌즈 정체성 — 제목에 렌즈 id 를 넣는다, review-form 참조)")
             else:
                 errors.append(f"[{label}] 심사자 표 제목 「{r}」 이 렌즈 여럿({', '.join(hit)})에 걸린다 (② 렌즈 정체성)")
-        for lid, _lname in lenses:
+        for lid, _lname, _sd in lenses:
             n = len(matched.get(lid, []))
             if n == 0:
                 errors.append(f"[{label}] 렌즈 [{lid}] 의 심사자 표가 없다 (② 렌즈 정체성 — 3렌즈 각 1표)")
@@ -301,7 +306,7 @@ def split_cells(line):
     return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
-def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None):
+def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None, lens_scope=None, n_reviewers=None):
     """한 파트(본심사 / 재심사)에서 심사자 점수 표·종합 평균 줄·지적 목록을 읽는다.
 
     돌려주는 값: (점수 전체 목록, 심사자 제목 목록, 적힌 종합 평균 or None, 지적 표 개수)
@@ -356,7 +361,14 @@ def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None
                     errors.append(f"[{label}·{reviewer}] 차원 [{dim}] 사유 칸이 비어 있다 "
                                   "(② 양식 — 빈 칸을 남기면 그 심사는 실패다, review-form)")
             if dims:
-                for d in dims:
+                req = dims
+                if lens_scope:
+                    low = (reviewer or "").lower()
+                    for lid, subset in lens_scope.items():
+                        if lid.lower() in low:
+                            req = [d for d in dims if d in subset]
+                            break
+                for d in req:
                     if d not in seen:
                         errors.append(f"[{label}·{reviewer}] 차원 [{d}] 행이 없다 (② 3인×전차원 전수, 버전 스코핑 — 누락 행 실패)")
                 extra = [d for d in seen if d not in (known or dims)]
@@ -384,8 +396,9 @@ def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None
             print(f"[{label}] 지적 {n_issues}건 · 처리 빈 칸 {n_empty}건")
             continue
         i += 1
-    if len(reviewers) != REVIEWERS_REQUIRED:
-        errors.append(f"[{label}] 심사자 표 {len(reviewers)}개 ≠ {REVIEWERS_REQUIRED} (② 심사자 3인 — {', '.join(reviewers) or '없음'})")
+    required = n_reviewers or REVIEWERS_REQUIRED
+    if len(reviewers) != required:
+        errors.append(f"[{label}] 심사자 표 {len(reviewers)}개 ≠ {required} (② 심사자 전원 — 정본은 rubric panel 크기. {', '.join(reviewers) or '없음'})")
     return scores, reviewers, stated_avg, n_issue_tables
 
 
@@ -407,7 +420,7 @@ def main():
 
     warns, errors = [], []
     threshold, src = load_threshold(warns)
-    all_dims, rubric_ver = load_dimensions(warns)
+    all_dims, rubric_ver, dim_id_map = load_dimensions(warns)
     if rubric_ver is None:
         rubric_ver = max(DIMS_REQUIRED_BY_VERSION)
 
@@ -440,7 +453,13 @@ def main():
     re_lines = lines[split_at:] if split_at is not None else []
 
     lenses = load_panel(warns)
-    scores, reviewers, stated, issue_tables = parse_part(main_lines, "본심사", dims, errors, warns, known, dims_required)
+    # 렌즈별 채점 스코프 — rubric panel 의 scored_dims (id → 차원 이름 집합)
+    lens_scope = {}
+    if lenses and dim_id_map:
+        for lid, _ln, sd in lenses:
+            if sd:
+                lens_scope[lid] = {dim_id_map.get(x, x) for x in sd}
+    scores, reviewers, stated, issue_tables = parse_part(main_lines, "본심사", dims, errors, warns, known, dims_required, lens_scope or None, len(lenses) if lenses else None)
     check_lenses(reviewers, lenses, "본심사", errors)
     if issue_tables == 0:
         errors.append("[본심사] 지적 목록 표가 없다 — 지적 0건이어도 표(헤더)는 둔다 "
@@ -464,7 +483,7 @@ def main():
                 errors.append(f"본심사 평균 {avg:.2f} < 임계 {threshold} 인데 재심사 섹션이 없다 "
                               "(⑤ fail_path — 미달 호는 뼈대를 수정하고 다시 심사받는다)")
         else:
-            r_scores, r_reviewers, r_stated, _ = parse_part(re_lines, "재심사", dims, errors, warns, known, dims_required)
+            r_scores, r_reviewers, r_stated, _ = parse_part(re_lines, "재심사", dims, errors, warns, known, dims_required, lens_scope or None, len(lenses) if lenses else None)
             check_lenses(r_reviewers, lenses, "재심사", errors)
             if not r_scores:
                 errors.append("재심사 섹션은 있는데 점수 표가 없다 (⑤ — 제목만 있는 재심사는 재심사가 아니다)")

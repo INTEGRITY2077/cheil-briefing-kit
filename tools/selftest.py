@@ -43,8 +43,18 @@ def score_table(scores, reason="사유 한 줄이다"):
             f"| **평균** | {avg:.2f} | |")
 
 
+COLD_TABLE = """### cold (배경 0 독자 렌즈)
+
+| 차원 | 점수 | 사유 한 줄 |
+|---|---:|---|
+| R5 근거-주장 정합 | 7 | 사유 한 줄이다 |
+| R6 카피 인테그리티 | 8 | 사유 한 줄이다 |
+| **평균** | 7.50 | |
+"""
+
+
 def review_record(date, target=None, headings=None, scores=None, stated="7.61",
-                  reason="사유 한 줄이다", issues=True):
+                  reason="사유 한 줄이다", issues=True, cold=True):
     """review-form 정본 골격의 합성 심사 기록. 인자로 위반을 주입한다."""
     target = target or f"eval/proto-{date}.md"
     headings = headings or ["### reader (독자 렌즈)", "### refuter (반증 렌즈)",
@@ -57,6 +67,8 @@ def review_record(date, target=None, headings=None, scores=None, stated="7.61",
         if h:
             parts += [h, ""]
         parts += [score_table(s, reason), ""]
+    if cold:
+        parts += [COLD_TABLE, ""]
     parts += ["## 종합", "", "| 항목 | 값 |", "|---|---|",
               f"| 3인 평균 | {stated} |", "| 판정 | 통과 |", ""]
     if issues:
@@ -145,7 +157,8 @@ def main():
             "2026-08-24", issues=False))                                 # 지적 표 부재
         w(j("eval", "review-2026-08-25.md"), review_record(
             "2026-08-25", target="output/web/2026-08-25.html"))          # 웹판 대상
-        for d in ("20", "21", "22", "23", "24", "25"):
+        w(j("eval", "review-2026-08-26.md"), review_record("2026-08-26", cold=False))
+        for d in ("20", "21", "22", "23", "24", "25", "26"):
             w(j("output", "web", f"2026-08-{d}.html"), "<h1>x</h1>")
 
         # check_insight — 정상 / 뼈대 배신 / 가짜 좌표
@@ -206,6 +219,8 @@ def main():
              ["output/web/2026-08-25.html"], 1, None, None),
             ("review 심사 대상=웹판 (--retro)", "check_review.py",
              ["output/web/2026-08-25.html", "--retro"], 0, None, None),
+            ("review cold 표 누락 (panel 4렌즈 전수)", "check_review.py",
+             ["output/web/2026-08-26.html"], 1, None, None),
             ("insight 정상 — 좌표 실존·뼈대 일치", "check_insight.py",
              ["output/web/2026-08-30.html"], 0, None, None),
             ("insight 화두 칸 자립 — 사람 문장 + 좌표 병기 (I8b)", "check_insight.py",

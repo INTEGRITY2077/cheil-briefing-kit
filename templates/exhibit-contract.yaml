@@ -42,6 +42,19 @@ exhibit:
     - kostat.go.kr             # 정부 통계
     - kosis.kr
     - index.go.kr
+    # 세계 층 공식 1차자료 (2026-08-14 편입 — 이슈 #28 종결의 편집장 지시가 합의 근거.
+    # 종전 화이트리스트는 세계 층 1차자료를 능동 차단해, 세계 스윕(F-050~055)을 원장·
+    # 본문에는 넣고 1급 판형(전시물)에는 못 싣는 상태였다. 회사·플랫폼 공식 도메인만 —
+    # 업계지·조사기관(AdExchanger·eMarketer 등)은 여전히 금지, 링크+2문장만 가능)
+    - wpp.com                  # 글로벌 지주 공식
+    - publicisgroupe.com
+    - omc.com
+    - group.dentsu.com
+    - openai.com               # AI 플랫폼 공식
+    - unilever.com             # 글로벌 광고주 공식 IR/뉴스룸
+    - pginvestor.com
+    - loreal-finance.com
+    - investors.coca-colacompany.com
 
 # 재전시 규칙 (편집反3·제작反5)
 reexhibit:

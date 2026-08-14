@@ -16,6 +16,16 @@
      generated.at 보다, 그리고 log.md 최신 항목 날짜보다 오래되면 실패
      (routine 7절 재생성 누락 검출)
 
+큰축 축적 봉인 (2026-08-14 이슈 #27 — 태깅 누락·점수판 오기·3중 장부 표류가
+전부 무탐이던 실측에서. okf/axes.md 가 없으면 두 판정은 생략·고지한다):
+  ④ 큰축 등재 완결 — status: stable 인 사실 전수가 okf/axes.md 의 계보 표
+     또는 무소속 판정 원장에 등재돼 있어야 한다 (axes.md 증분 원칙 「여기 없고
+     계보에도 없는 유효 사실이 생기면 그것이 미검토다」의 기계화)
+  ⑤ 점수판 3중 장부 대조 — 축별 계보 표의 방향(지지/반증/조건형성/중립) 행 수를
+     재계산해 ⓐ axes.md **점수판** 줄 ⓑ profiles macro_axes.status
+     ⓒ okf/index.md 큰축 요약 셋 모두와 대조한다. 최신 관측 F-ID 는 계보 실존만
+     본다. 수동 집계가 어긋난 채 발행되는 것을 막는다 — 집계의 정본은 계보 표다
+
 전부 정적 검사라 네트워크 없이 돌릴 수 있다. 실패 시 종료코드 1.
 """
 import io, os, re, sys
@@ -122,12 +132,84 @@ def main():
                 f"[신선도] index generated.at({idx_at[:10]}) 이 log.md 최신 항목({max(log_dates)})보다 오래됐다 — 7절 재생성 누락"
             )
 
+    # ④⑤ 큰축 축적 봉인 (이슈 #27) — axes.md 가 있으면 등재 완결·점수판 정합을 본다
+    axes_path = os.path.join(okf, "axes.md")
+    profile_path = os.path.join(kit, "profiles", "cheil.yaml")
+    if not os.path.exists(axes_path):
+        print("고지: okf/axes.md 없음 — 큰축 미도입 킷으로 보고 ④⑤ 생략")
+    else:
+        axes_text = read(axes_path)
+        listed = {m.lower() for m in re.findall(r"facts/(f-\d{3}(?:-[xX])?)\.md", axes_text)}
+        missing_axes = [rid for rid, st in sorted(fact_status.items())
+                        if st == "stable" and rid not in listed]
+        for rid in missing_axes:
+            errors.append(f"[큰축 미검토] {rid} — 계보에도 무소속 원장에도 없다 "
+                          "(④ 수집 등재 시 태깅 증분 의무 — 등재와 함께 계보 또는 무소속 표에 기입한다, 이슈 #27)")
+
+        # ⑤ 축별 재계산 — 계보 표가 집계의 정본이다
+        DIRS = ("지지", "반증", "조건형성", "중립")
+        recount, latest_ok = {}, {}
+        sections = re.split(r"^## +", axes_text, flags=re.M)
+        for sec in sections:
+            m = re.match(r"(MA\d+)\b", sec)
+            if not m:
+                continue
+            ma = m.group(1)
+            rows = re.findall(r"^\|\s*\[(F-\d{3})\]\(facts/f-\d{3}\.md\)\s*\|[^|]*\|\s*(지지|반증|조건형성|중립)\s*\|",
+                              sec, re.M)
+            recount[ma] = {d: sum(1 for _, v in rows if v == d) for d in DIRS}
+            sb = re.search(r"\*\*점수판\*\*\s*지지 (\d+) · 반증 (\d+) · 조건형성 (\d+) · 중립 (\d+) · 최신 관측 (F-\d{3})", sec)
+            if not sb:
+                errors.append(f"[점수판] {ma} — axes.md 에서 점수판 줄을 읽지 못했다 (⑤ 형식)")
+                continue
+            stated = dict(zip(DIRS, map(int, sb.groups()[:4])))
+            for d in DIRS:
+                if stated[d] != recount[ma][d]:
+                    errors.append(f"[점수판 표류] {ma} {d} — axes.md 점수판 {stated[d]} ≠ 계보 재계산 {recount[ma][d]} "
+                                  "(⑤ 집계의 정본은 계보 표다, 이슈 #27)")
+            latest = sb.group(5)
+            latest_ok[ma] = latest
+            if latest not in {r for r, _ in rows}:
+                errors.append(f"[점수판] {ma} 최신 관측 {latest} 이 계보 표에 없다 (⑤)")
+
+        # ⓑ profiles macro_axes.status 대조
+        try:
+            import yaml
+            prof = yaml.safe_load(read(profile_path)) if os.path.exists(profile_path) else {}
+            for a in (prof or {}).get("macro_axes") or []:
+                ma = str(a.get("id"))
+                st = a.get("status") or {}
+                if ma not in recount:
+                    errors.append(f"[3중 장부] profiles macro_axes {ma} 가 axes.md 에 절이 없다 (⑤)")
+                    continue
+                for d in DIRS:
+                    pv = st.get(d)
+                    if pv is not None and int(pv) != recount[ma][d]:
+                        errors.append(f"[3중 장부] profiles {ma} {d} {pv} ≠ 계보 재계산 {recount[ma][d]} (⑤ 수동 동기화 표류)")
+                lv = str(st.get("최신관측") or "")
+                if lv and latest_ok.get(ma) and lv != latest_ok[ma]:
+                    errors.append(f"[3중 장부] profiles {ma} 최신관측 {lv} ≠ axes.md {latest_ok[ma]} (⑤)")
+        except Exception as ex:
+            print(f"경고: profiles macro_axes 대조 생략 ({ex})")
+
+        # ⓒ index.md 큰축 요약 대조
+        for m in re.finditer(r"^- (MA\d+) — \[[^\]]*\]\(axes\.md\) \(지지 (\d+) · 반증 (\d+) · 조건형성 (\d+) · 중립 (\d+)\)",
+                             index_text, re.M):
+            ma = m.group(1)
+            if ma not in recount:
+                continue
+            stated = dict(zip(DIRS, map(int, m.groups()[1:])))
+            for d in DIRS:
+                if stated[d] != recount[ma][d]:
+                    errors.append(f"[3중 장부] index.md {ma} {d} {stated[d]} ≠ 계보 재계산 {recount[ma][d]} (⑤)")
+
     for e in errors:
         print("실패:", e)
     if errors:
         sys.exit(1)
     dep_n = sum(1 for s in fact_status.values() if s == "deprecated")
-    print(f"통과: 참조 {len(refs)}건 전부 실존, 사실 {len(fact_status)}건(대체 {dep_n}) 상태 정합, 인덱스 신선")
+    print(f"통과: 참조 {len(refs)}건 전부 실존, 사실 {len(fact_status)}건(대체 {dep_n}) 상태 정합, 인덱스 신선"
+          + (", 큰축 등재 완결·점수판 3중 장부 정합" if os.path.exists(axes_path) else ""))
 
 
 if __name__ == "__main__":

@@ -23,7 +23,10 @@
                          0이면 실패**. h1 에만 없고 받는 줄에 있으면 통과 — 추상 헤드
                          허용 조건(headline-guard masthead.h1.concreteness, issue #18).
                          비신호어(non_signal)·받는 줄 class 의 정본은 같은 절의
-                         static_check — 이 스크립트는 그 값을 읽어 판정만 한다
+                         static_check — 이 스크립트는 그 값을 읽어 판정만 한다.
+                         간명 상한(⑤b — 2026-08-14 편집장 반려): h1 글자수(공백·구두점
+                         제외)·대시 절 수가 headline-guard brevity.static_check 상한을
+                         넘으면 실패 — 요약문은 카피가 아니다
   ⑥ Q1   함의 유보 종결 — 축 절의 함의 문장(section[data-axis] 의 마지막 p.note —
                          규명·표본 줄은 제외)의 마지막 문장이 유보형 종결
                          ("이후에야"·"에서 드러난다"·"가 재료다"·"쌓여야"류)인 건이
@@ -124,7 +127,10 @@ def load_guards():
                 "non_signal": {str(w) for w in (sc.get("non_signal") or [])}}
     else:
         warns.append("⑤H9: headline-guard 에 concreteness.static_check 절이 없다 — 화두 구체성 판정 생략")
-    return min_side, must, conc, warns
+    brevity = (hg.get("masthead", {}).get("h1", {}).get("brevity") or {}).get("static_check")
+    if not brevity:
+        warns.append("⑤H9(간명): headline-guard 에 brevity.static_check 절이 없다 — 길이·절 수 상한 판정 생략")
+    return min_side, must, conc, brevity, warns
 
 
 def strip_tags(html):
@@ -225,7 +231,7 @@ def main():
     if len(sys.argv) < 2 or not os.path.exists(sys.argv[1]):
         sys.exit(USAGE)
     path = sys.argv[1]
-    min_side, must_ledger, conc, warns = load_guards()
+    min_side, must_ledger, conc, brevity, warns = load_guards()
     if not os.path.isdir(FACTS_DIR):
         print("실패: okf/facts/ 가 없다 — 원장 없이는 H6·I2 판정 불가")
         sys.exit(1)
@@ -327,6 +333,24 @@ def main():
                 errors.append(f"화두(h1)에 구체 신호가 0인데 받는 줄(.{'/.'.join(conc['receiving'])})이 없다 — "
                               "추상 헤드는 바로 다음 줄이 즉시 구체로 받을 때만 허용 "
                               "(H9 · issue #18 반려 3건째 「받는 줄도 없음」, 받는 줄은 skeleton 계약 요소)")
+
+    # ── ⑤b H9 간명 상한 — 요약문은 카피가 아니다 (2026-08-14 편집장 반려) ──
+    # 정본은 headline-guard masthead.h1.brevity — 공백·구두점 제외 글자수와
+    # 대시(—) 절 수만 기계가 본다. 실물/개념어 구분은 R6 사람 판정.
+    if brevity:
+        m = re.search(r"<h1\b[^>]*>(.*?)</h1>", h, re.S)
+        if m:
+            raw = re.sub(r"\s+", " ", strip_tags(m.group(1))).strip()
+            n_chars = len(re.sub(r"[^0-9A-Za-z가-힣]", "", raw))
+            n_clauses = len([p for p in raw.split("—") if p.strip()])
+            print(f"⑤b: 화두 간명 — {n_chars}자(공백 제외) · {n_clauses}절")
+            if n_chars > int(brevity.get("max_chars", 10**9)):
+                errors.append(f"화두(h1) {n_chars}자 > 상한 {brevity['max_chars']}자(공백·구두점 제외) — "
+                              "압축이 덜 됐다. 요약문은 카피가 아니다 "
+                              "(H9 간명 상한, headline-guard brevity — 2026-08-14 편집장 반려 실측)")
+            if n_clauses > int(brevity.get("max_clauses", 10**9)):
+                errors.append(f"화두(h1) 절 수 {n_clauses} > 상한 {brevity['max_clauses']} — "
+                              "대시로 문장을 잇지 말고 화두 하나를 골라라 (H9 간명 상한)")
 
     # ── ⑥ Q1 함의 유보 종결 — 절반 넘게 「나중에 안다」로 끝나는가 ──
     # 함의 자리 = 축 절(section[data-axis])의 마지막 p.note (규명·표본 줄 제외).

@@ -9,12 +9,19 @@
                        차원 전수는 **루브릭 버전 스코핑**이다 — 기록 머리의
                        「루브릭 버전 … vN」을 읽어, rubric 차원 중 since ≤ N 인
                        것만 요구한다 (v1 기록은 R1~R5 5차원, v2 기록은 R6 포함 6차원.
-                       R6 v2 신설이 v1 기록을 소급 실패시키던 2026-08-13 검수 결함 수리)
+                       R6 v2 신설이 v1 기록을 소급 실패시키던 2026-08-13 검수 결함 수리).
+                       형식 봉인 확장 (2026-08-14 이슈 #29 — 전부 형식이지 내용이 아니다):
+                       점수는 0~10 범위(한 칸 인플레가 평균을 세탁하는 우회 실측 차단),
+                       사유 칸 빈 칸 실패(양식 「빈 칸을 남기면 그 심사는 실패다」의 봉인),
+                       심사자 제목의 렌즈 정체성 — rubric panel 의 렌즈(id/name)마다
+                       표가 정확히 하나(단일 심사자가 표 3개를 쓰는 우회 실측 차단)
   ③ 평균 ≥ 임계      — 전 점수 평균이 임계 이상인가.
                        임계의 정본은 templates/insight-rubric.yaml 의 threshold —
                        단 config.yaml 에 review.threshold 가 있으면 그것이 우선한다
                        (check_size 의 config 로딩 방식과 같은 pyyaml 읽기)
-  ④ 처리 칸 0빈칸    — 지적 목록(정본 | # | 렌즈 | 지적 | 처리 … |)의 처리 칸에 빈 칸이 없는가
+  ④ 처리 칸 0빈칸    — 지적 목록(정본 | # | 렌즈 | 지적 | 처리 … |)의 처리 칸에 빈 칸이 없는가.
+                       본심사에 지적 목록 표 자체가 없으면 실패 — 지적 0건이어도
+                       표(헤더)는 둔다. 표를 빼면 ④가 공허 통과하는 우회 실측 차단 (이슈 #29)
   ⑤ 재심사 정책      — 본심사 평균이 임계 미달이면 재심사 섹션이 있어야 한다
                        (재조판 1회 → 재심사 정책 강제). 재심사 평균이 임계 이상이면
                        통과, 재심사 후에도 미달이면 「발행 가능하되 보고 명기」 —
@@ -199,6 +206,60 @@ def load_dimensions(warns):
     return None, None
 
 
+def load_panel(warns):
+    """rubric panel 절에서 렌즈 (id, name) 목록을 읽는다 — 심사자 제목의 정체성 정본.
+
+    못 읽으면 None — 렌즈 정체성 검사는 「서로 다른 제목 3개」로 강등하고 경고한다 (F5).
+    """
+    if not os.path.exists(RUBRIC):
+        return None
+    try:
+        import yaml
+        with io.open(RUBRIC, encoding="utf-8") as f:
+            y = yaml.safe_load(f) or {}
+        panel = _find_list(y, "panel")
+        if panel:
+            lenses = [(str(p.get("id") or ""), str(p.get("name") or ""))
+                      for p in panel if isinstance(p, dict)]
+            if lenses and all(i for i, _ in lenses):
+                return lenses
+        warns.append("rubric 에서 panel(렌즈 목록)을 찾지 못했다 — 렌즈 정체성은 제목 중복 검사로만 판정")
+    except Exception:
+        warns.append("rubric 을 읽지 못했다 — 렌즈 정체성은 제목 중복 검사로만 판정")
+    return None
+
+
+def check_lenses(reviewers, lenses, label, errors):
+    """심사자 표 제목의 렌즈 정체성 — 렌즈마다 표가 정확히 하나인가 (이슈 #29).
+
+    단일 심사자가 제목 없이(또는 같은 제목으로) 표 3개를 쓰는 우회가 exit 0 으로
+    통과하던 실측에서. 내용(점수의 질)이 아니라 형식(제목의 대응)만 본다 — 황금률 유지.
+    """
+    if lenses:
+        matched = {}
+        for r in reviewers:
+            low = r.lower()
+            hit = [lid for lid, lname in lenses
+                   if lid.lower() in low or (lname and lname in r)]
+            if len(hit) == 1:
+                matched.setdefault(hit[0], []).append(r)
+            elif not hit:
+                errors.append(f"[{label}] 심사자 표 제목 「{r}」 이 rubric panel 의 어느 렌즈에도 대응하지 않는다 "
+                              "(② 렌즈 정체성 — 제목에 렌즈 id 를 넣는다, review-form 참조)")
+            else:
+                errors.append(f"[{label}] 심사자 표 제목 「{r}」 이 렌즈 여럿({', '.join(hit)})에 걸린다 (② 렌즈 정체성)")
+        for lid, _lname in lenses:
+            n = len(matched.get(lid, []))
+            if n == 0:
+                errors.append(f"[{label}] 렌즈 [{lid}] 의 심사자 표가 없다 (② 렌즈 정체성 — 3렌즈 각 1표)")
+            elif n > 1:
+                errors.append(f"[{label}] 렌즈 [{lid}] 의 심사자 표가 {n}개 — 중복이다 (② 렌즈 정체성 — 독립 채점은 렌즈당 1표)")
+    else:
+        dup = {r for r in reviewers if reviewers.count(r) > 1}
+        if dup:
+            errors.append(f"[{label}] 심사자 표 제목이 중복된다: {', '.join(sorted(dup))} (② 렌즈 정체성 강등 판정)")
+
+
 def record_rubric_version(lines, warns, fallback):
     """기록 머리의 「루브릭 버전 … vN」 행에서 N 을 읽는다 — 차원 전수의 스코프.
 
@@ -236,11 +297,12 @@ def split_cells(line):
 def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None):
     """한 파트(본심사 / 재심사)에서 심사자 점수 표·종합 평균 줄·지적 목록을 읽는다.
 
-    돌려주는 값: (점수 전체 목록, 심사자 수, 적힌 종합 평균 or None)
+    돌려주는 값: (점수 전체 목록, 심사자 제목 목록, 적힌 종합 평균 or None, 지적 표 개수)
     지적 목록의 빈 처리 칸은 errors 에 직접 쌓는다.
     """
     scores, reviewers = [], []
     stated_avg = None
+    n_issue_tables = 0
     last_heading = "(제목 없음)"
     i = 0
     while i < len(lines):
@@ -274,9 +336,18 @@ def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None
                 if dim in SUMMARY_ROW_LABELS:
                     continue  # 표 끝 「**평균**」 요약 행 — 차원 아님, 집계 제외
                 try:
-                    seen[dim] = float(re.sub(r"[^0-9.]", "", raw) or "x")
+                    val = float(re.sub(r"[^0-9.]", "", raw) or "x")
                 except ValueError:
                     errors.append(f"[{label}·{reviewer}] 차원 [{dim}] 점수가 숫자가 아니다: 「{raw}」 (② 전수)")
+                    continue
+                if not 0 <= val <= 10:
+                    errors.append(f"[{label}·{reviewer}] 차원 [{dim}] 점수 {raw} 가 0~10 범위 밖이다 "
+                                  "(② 점수 범위 — 한 칸 인플레는 평균 세탁이다, 이슈 #29)")
+                    continue
+                seen[dim] = val
+                if len(cells) < 3 or not cells[2].strip("* "):
+                    errors.append(f"[{label}·{reviewer}] 차원 [{dim}] 사유 칸이 비어 있다 "
+                                  "(② 양식 — 빈 칸을 남기면 그 심사는 실패다, review-form)")
             if dims:
                 for d in dims:
                     if d not in seen:
@@ -291,6 +362,7 @@ def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None
         cols = issue_cols(line)
         if cols:
             ji, ci = cols
+            n_issue_tables += 1
             i += 1
             n_issues, n_empty = 0, 0
             while i < len(lines) and TABLE_ROW.match(lines[i]):
@@ -307,7 +379,7 @@ def parse_part(lines, label, dims, errors, warns, known=None, dims_required=None
         i += 1
     if len(reviewers) != REVIEWERS_REQUIRED:
         errors.append(f"[{label}] 심사자 표 {len(reviewers)}개 ≠ {REVIEWERS_REQUIRED} (② 심사자 3인 — {', '.join(reviewers) or '없음'})")
-    return scores, reviewers, stated_avg
+    return scores, reviewers, stated_avg, n_issue_tables
 
 
 def main():
@@ -347,7 +419,12 @@ def main():
     main_lines = lines[:split_at] if split_at is not None else lines
     re_lines = lines[split_at:] if split_at is not None else []
 
-    scores, reviewers, stated = parse_part(main_lines, "본심사", dims, errors, warns, known, dims_required)
+    lenses = load_panel(warns)
+    scores, reviewers, stated, issue_tables = parse_part(main_lines, "본심사", dims, errors, warns, known, dims_required)
+    check_lenses(reviewers, lenses, "본심사", errors)
+    if issue_tables == 0:
+        errors.append("[본심사] 지적 목록 표가 없다 — 지적 0건이어도 표(헤더)는 둔다 "
+                      "(④ — 표를 빼면 처리 완결 판정이 공허 통과한다, 이슈 #29)")
     avg = sum(scores) / len(scores) if scores else 0.0
     print(f"②③: 본심사 심사자 {len(reviewers)}인 · 점수 {len(scores)}개 · 평균 {avg:.2f} (임계 {threshold})")
     if stated is None:
@@ -367,7 +444,8 @@ def main():
                 errors.append(f"본심사 평균 {avg:.2f} < 임계 {threshold} 인데 재심사 섹션이 없다 "
                               "(⑤ 재조판 1회 → 재심사 정책 — 미달 호는 재조판하고 다시 심사받는다)")
         else:
-            r_scores, r_reviewers, r_stated = parse_part(re_lines, "재심사", dims, errors, warns, known, dims_required)
+            r_scores, r_reviewers, r_stated, _ = parse_part(re_lines, "재심사", dims, errors, warns, known, dims_required)
+            check_lenses(r_reviewers, lenses, "재심사", errors)
             if not r_scores:
                 errors.append("재심사 섹션은 있는데 점수 표가 없다 (⑤ — 제목만 있는 재심사는 재심사가 아니다)")
             else:

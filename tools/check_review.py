@@ -138,10 +138,20 @@ def load_threshold(warns):
 
 
 def _find_key(node, key):
-    """매핑 트리에서 key 를 깊이 우선으로 찾는다 — rubric 의 절 구조가 확정 전이라 관대하게."""
+    """매핑 트리에서 key 를 깊이 우선으로 찾는다 — rubric 의 절 구조가 확정 전이라 관대하게.
+
+    key 의 값이 스칼라면 그대로, `threshold: {value: 7.0, basis: …}` 처럼 중첩
+    매핑이면 그 안의 value 스칼라를 돌려준다 (이슈 #22 — 스칼라만 찾던 구현이
+    rubric 의 중첩 threshold 를 못 읽어, config 부재 환경의 폴백이 전 케이스
+    실패했다. config.example 의 「비우면 rubric 값이 기본」 약속을 실동작으로).
+    """
     if isinstance(node, dict):
         if key in node and not isinstance(node[key], (dict, list)):
             return node[key]
+        if key in node and isinstance(node[key], dict):
+            inner = node[key].get("value")
+            if inner is not None and not isinstance(inner, (dict, list)):
+                return inner
         for v in node.values():
             found = _find_key(v, key)
             if found is not None:

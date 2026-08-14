@@ -146,6 +146,9 @@ def main():
                        "다른 화두가 실렸다"))
         w(j("eval", "proto-2026-08-31.md"), PROTO.format(date="2026.08.31"))
         w(j("output", "web", "2026-09-01.html"), PAGE.replace("(F-038)", "(F-999)"))
+        w(j("output", "web", "2026-09-04.html"), PAGE.replace(
+            "광고 자본은 GPT로 움직이는가 — 답의 한 조각이 우리 손에 있다",
+            "전환의 값은 세계가 먼저 매겼다 — 우리 증거는 오늘이 법정기한인 반기보고서부터다"))  # 34자 — 간명 상한 위반
 
         # check_run — 로스터 전수 / 한 줄 / 실패코드
         rows = [
@@ -197,6 +200,8 @@ def main():
              ["output/web/2026-08-31.html"], 1, None, None),
             ("insight 가짜 좌표 (F-999)", "check_insight.py",
              ["output/web/2026-09-01.html"], 1, None, None),
+            ("insight h1 간명 상한 초과 (공백 제외 34자 > 30)", "check_insight.py",
+             ["output/web/2026-09-04.html"], 1, None, None),
             ("run 로스터 전수 기록", "check_run.py",
              ["--date", "2026-08-30", tmp], 0, None, None),
             ("run 한 줄 기록 — 로스터 미달", "check_run.py",

@@ -15,7 +15,7 @@
 필수 충족 조건은 티어로 가른다 — 우선순위가 곧 카드의 순서다:
 - **T0 차단 조건** (카드 이전, 기계가 판정): 세션 유형·디스크·스케줄 도구 (0-1·0-2).
   미충족이면 카드 없이 해결 방법과 함께 멈춘다. **python·git 은 T0 이 아니다** —
-  부재·앨리어스·구버전(3.10 미만)이어도 멈추지 않고 자동 설치 대상으로 표시한다(0-2).
+  부재·앨리어스·구버전(3.9 미만)이어도 멈추지 않고 자동 설치 대상으로 표시한다(0-2).
   카드 이전 단계에서는 부재·구버전 감지와 "카드 ②에 자동 설치 항목을 넣는다"까지만
   하고, **실제 설치는 카드 ② 승인 직후(1절 진입 전)에 수행한다** — 승인 전에는
   아무것도 설치하지 않는다.
@@ -57,13 +57,13 @@ T1 미완 항목이 남으면 완료 보고는 "설치 완료"가 아니라 "T1 
 - **포괄 승인이 아니다 — 열거 승인이다.** 카드의 이 부분은 아래 네 가지를 **각각
   구체적으로 열거**해 보여주고, 사용자의 승인은 **열거된 것에만** 미친다:
   1) **무인 실행 권한 목록** — 5절의 허용 목록을 카드 안에 통째로 제시.
-     `Bash(python:*)` 가 "설치 위치의 파이썬을 매일 아침 묻지 않고 실행"을 뜻한다는 것,
+     `Bash(python:*)`·`Bash(python3:*)` 가 "설치 위치의 파이썬을 매일 아침 묻지 않고 실행"을 뜻한다는 것(macOS 는 python3 — #33 실측),
      `rm`·`git push` 는 제외했다는 것을 명시
   2) **정기 삭제의 범위** — 보존 정리는 "설치 폴더 안 `output/audio/` 의 30일 초과
      오디오 파일"뿐이며 그 외 어떤 파일도 삭제하지 않는다는 것
   3) **공개 발행의 범위** — 매일 아침 그날의 브리핑 아티팩트를 사용자 본인 계정으로
      발행하고 "링크가 있는 누구나" 공유를 켠다는 것 (내용은 공개자료 기반 브리핑뿐)
-  4) **자동 설치의 범위** — Python 이 컴퓨터에 없거나 **3.10 미만 구버전**일 때,
+  4) **자동 설치의 범위** — Python 이 컴퓨터에 없거나 **3.9 미만 구버전**일 때,
      또는 Git 이 없을 때만 Windows 기본 패키지 도구(winget)로 Python 3.12·Git 을
      자동 설치하며, 그 외 어떤 소프트웨어도 설치하지 않는다는 것. 구버전 Python 이
      있는 경우 **제거하지 않고 3.12 를 병행 설치**하며, 기존 파이썬과 그 위에서
@@ -133,14 +133,18 @@ T1 미완 항목이 남으면 완료 보고는 "설치 완료"가 아니라 "T1 
 - Bash·파일 도구가 있으면 통과.
 
 ### 0-2. 실행 환경
-- **python 판별** — `python -c "import sys;print(sys.version)"` 종료코드 0 이고 3.10
+- **python 판별** — **비 Windows(macOS·Linux)는 `python3` 를 먼저 시도한다**:
+  `python3 -c "import sys;print(sys.version)"` → 실패 시에만 `python` 재시도.
+  macOS 에는 `python` 명령이 아예 없어(#33 실측) python 단독 판별이 멀쩡한 3.9.6 을
+  "부재"로 오판하고 winget 경로로 강등시켰다. Windows 는 종전대로
+  `python -c "import sys;print(sys.version)"` 종료코드 0 이고 3.9
   이상이면 통과. **`python --version` 만으로 판정하지 않는다** — Windows 는 파이썬이
   없어도 MS스토어 앨리어스(`…\WindowsApps\python.exe`, 0바이트)가 PATH 에 잡혀
   "Python was not found; run without arguments to install from the Microsoft
   Store..." 를 내며 종료코드 9009 로 끝나거나 스토어 창을 띄운다. `-c` 실행은 실제
   인터프리터만 통과한다. 보조 판별: `where.exe python` 출력에 WindowsApps 경로만
   있으면 앨리어스뿐 = 진짜 파이썬 없음.
-  부재·앨리어스·**구버전(종료코드 0 이지만 3.10 미만 — 예: 3.8)** 모두 **중단하지
+  부재·앨리어스·**구버전(종료코드 0 이지만 3.9 미만)** 모두 **중단하지
   않는다** — 아래 「자동 설치」 경로로 간다. 구버전은 부재와 동일하게 자동 설치
   대상이되, 기존 파이썬을 제거하지 않는 **병행 설치**다(카드 ② 4)항에 그렇게
   열거돼 있다). 이 킷의 모든 python 호출은 병행 설치된 3.12 를 쓴다.
@@ -149,15 +153,20 @@ T1 미완 항목이 남으면 완료 보고는 "설치 완료"가 아니라 "T1 
 
 **자동 설치 (python·git 부재·앨리어스·구버전 시)** — 카드 이전에 두 가지를 끝낸다:
 ⑴ 부재·구버전 사실과 설치 예정을 표에 기록하고 카드 ② 4)항에 열거할 준비,
-⑵ **자동 설치 가능 판정** — 플랫폼이 Windows 인지, 그리고 `where.exe winget` 이
-성공하는지를 **카드 이전에** 판별한다 (winget 이
-`%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe` 에 있는 것은 정상이다 — python
-앨리어스와 혼동 금지). 불가(비 Windows 또는 winget 부재)면 **카드를 내지 않고**
+⑵ **자동 설치 가능 판정** — Windows 는 `where.exe winget` 성공 여부,
+**macOS 는 `brew --version` 성공 여부**를 **카드 이전에** 판별한다 (#33 실측 —
+brew 는 winget 과 대등한 무인 설치 경로다. winget 이
+`%LOCALAPPDATA%\Microsoft\WindowsApps\winget.exe` 에 있는 것은 정상 — python
+앨리어스와 혼동 금지). 불가(Windows 인데 winget 부재 · macOS 인데 brew 부재 ·
+그 외 플랫폼)면 **카드를 내지 않고**
 아래 3번 강등 안내와 함께 멈춘다 — T0 문안의 "자동 설치가 불가능한 환경만 멈춘다"
 의 판정 시점이 바로 여기이며, 카드 ② 4)항은 이 판정을 통과한 환경에서만 열거된다.
 (이 판정과 멈춤은 **자동 설치 대상이 있을 때만** 발동한다 — python·git 이 둘 다
 충족이면 플랫폼·winget 과 무관하게 이 절 전체를 건너뛴다.)
 **실제 설치는 카드 ② 승인 직후, 1절 진입 전에 수행한다.**
+1a. **macOS — brew 무인 설치.** (brew 존재는 카드 이전 ⑵에서 확인했다.)
+   부재하거나 구버전인 쪽만: `brew install python git` — 이 둘 외 설치 금지.
+   설치 후 판별은 `python3 -c …` 로 재실행한다.
 1. **Windows — winget 무인 설치.** (winget 존재는 카드 이전 ⑵에서 이미 확인했다.)
    **부재하거나 구버전인 쪽만** 설치한다 — 이 두 프로그램 외에는 어떤 것도 설치하지
    않는다:
@@ -254,7 +263,7 @@ T1 미완 항목이 남으면 완료 보고는 "설치 완료"가 아니라 "T1 
 ### 0-4. TTS 경로 판별 — 사다리: supertonic → gemini → edge
 - 기본값 **supertonic**(로컬 ONNX, 키·네트워크 불필요, Windows 네이티브 동작 확인):
   `python -m pip install supertonic soundfile` 가능한지 확인한다. 최초 1회 실행 때
-  모델(~99MB)을 HuggingFace에서 자동 다운로드한다고 미리 안내한다.
+  모델(실측 385MB — 캐시 ~/.cache/supertonic3)을 HuggingFace에서 자동 다운로드한다고 미리 안내한다.
   기본 보이스는 킷의 `voices/anchor-f1f2-30.json` — 합성 배속은 걸지 않는다(음절 씹힘,
   tts-guard pace 절). 청취 배속은 웹판 플레이어가 기본 1.3×.
 - **gemini**(2순위, 감정·톤 지시가 필요할 때)를 원하면: "Google AI Studio
@@ -299,7 +308,9 @@ python -m pip install supertonic soundfile edge-tts requests pyyaml
 gemini 선택 시 추가 설치는 없다 — `tools/make_audio_gemini.py` 는 표준 라이브러리
 (urllib)로 REST 를 직접 호출하므로 google-genai 패키지가 필요 없다. `.env` 의
 GEMINI_API_KEY 만 있으면 된다.
-(supertonic 은 최초 실행 때 모델 ~99MB 를 자동 다운로드한다 — 0-4에서 이미 고지)
+(supertonic 은 최초 실행 때 모델 실측 385MB 를 자동 다운로드한다 — 0-4에서 이미 고지.
+macOS CLT python3.9 는 LibreSSL 경고가 stderr 에 매 실행 남는다 — 차단 아님, #33 실측.
+pip 스크립트 PATH 경고도 무해하다 — 킷은 python -m 경유 호출이다)
 
 **선택 의존성 — 웹판 오디오 MP3(audio/mpeg) 변환용**: `python -m pip install imageio-ffmpeg`
 (설치 약 87MB, ffmpeg 바이너리 동봉이라 별도 ffmpeg 설치가 필요 없다.
@@ -357,7 +368,7 @@ GEMINI_API_KEY 만 있으면 된다.
     "allow": [
       "Read", "Write", "Edit", "Glob", "Grep", "Artifact",
       "WebFetch", "WebSearch",
-      "Bash(python:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(cp:*)",
+      "Bash(python:*)", "Bash(python3:*)", "Bash(py:*)", "Bash(ls:*)", "Bash(cp:*)",
       "Bash(mv:*)", "Bash(mkdir:*)", "Bash(echo:*)", "Bash(cat:*)", "Bash(cd:*)",
       "Bash(git status:*)", "Bash(git add:*)", "Bash(git commit:*)",
       "Bash(git diff:*)", "Bash(git log:*)",

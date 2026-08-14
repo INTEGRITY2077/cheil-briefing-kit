@@ -68,7 +68,7 @@ https://github.com/INTEGRITY2077/cheil-briefing-kit 를 읽고 SETUP.md 대로 �
 - **산출물은 당신 것입니다.** 브리핑은 당신의 claude.ai 계정으로, 당신의 아티팩트 URL로
   발행됩니다. `output/`(산출물)·`sources/`(전시물 원문)·`.env`·`config.yaml`은 커밋되지
   않으며(.gitignore), 저장소 push는 원작자·포크 전용입니다.
-- **첫 TTS 실행 때** Supertonic 모델(~99MB)을 HuggingFace에서 한 번 내려받습니다.
+- **첫 TTS 실행 때** Supertonic 모델(실측 385MB)을 HuggingFace에서 한 번 내려받습니다.
   이후에는 오프라인에서도 동작합니다.
 - **무인 실행 권한을 확인하세요.** 설치는 설치 위치에만 적용되는 허용 목록을
   `.claude/settings.json`에 만듭니다(SETUP 5절). 여기에는 킷의 파이썬 도구를 매일 아침

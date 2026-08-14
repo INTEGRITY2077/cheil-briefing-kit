@@ -72,6 +72,18 @@
 - **#31 경미 표류**: sync_skill 유닉스 절대경로 누출 패턴 + --check(무기록 검사),
   check_insight 자기 소개 「4개」→아홉 갱신, Q1 「절반 이상」→「절반 초과」 문구 통일.
 
+## v2026.08.14.6
+
+- **macOS 지원 실측 반영** (#33 — 맥미니 CLI 실측: selftest 24/24·애플실리콘
+  TTS·MP3 이식·게이트 전부 python 3.9.6 통과. 막힌 건 킷 문안 자체):
+  ① SETUP python 판별 — 비 Windows 는 `python3` 우선 (macOS 에 python 명령 부재)
+  ② 하한 3.10→3.9 (실측 근거 — 3.9.6 전 항목 통과)
+  ③ brew 를 winget 과 대등한 무인 설치 경로로 승격 (macOS 자동 설치)
+  ④ allowlist `Bash(python3:*)` 병기 — 없으면 macOS 무인 아침 실행 정지
+  ⑤ SKILL 인터프리터 자리표시 규정 (macOS·Linux = python3)
+  ⑥ 모델 크기 고지 정정 ~99MB→실측 385MB(~/.cache/supertonic3) + LibreSSL·
+  pip PATH 경고 무해 고지. 실측 보고 전문은 #33 코멘트.
+
 ## v2026.08.14.5
 
 - **콜드 리더(배경 0 독자) 렌즈 상설** (편집장 반려 실측 — "독자가 척척박사라

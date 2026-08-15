@@ -100,7 +100,19 @@ def load_roster(kit_root):
 
 
 def load_entries(run_log, target):
-    """run_log.jsonl 에서 target 날짜의 항목만 (줄번호, dict) 로 돌려준다."""
+    """run_log.jsonl 에서 target 날짜의 항목만 (줄번호, dict) 로 돌려준다.
+
+    날짜는 **`started_at` 기준**이다 — 루틴 SKILL 0-원장 절이 "같은 `started_at`
+    으로 짝을 맞추고" 를 규약으로 정하므로, 짝의 날짜도 같은 필드로 갈라야 시작
+    줄과 종료 줄이 한 날짜에 모인다. `ended_at` 은 시작 줄이 없는 기록에서만 쓴다.
+
+    종전에는 `ended_at` 을 우선했다. 그러면 **자정을 넘긴 실행에서 한 실행의 두
+    줄이 서로 다른 날짜로 갈라진다** (2026-08-15 맥 앱 실측, 이슈 #33):
+    21:36 시작 → 다음날 09:35 종료한 실행에서 시작일 판정은 시작 줄만 보고
+    「게이트 기록 없는 발행」(#18 문안), 종료일 판정은 종료 줄만 보고 「산출물
+    없음」 을 냈다. 게이트를 전종 돌린 실행을 게이트 미실행으로 지목하는 것은
+    #18 이 막으려던 것과 정반대 방향의 오진이라, 짝맞춤 규약 쪽으로 맞춘다.
+    """
     if not os.path.exists(run_log):
         return None  # 파일 자체가 없다
     entries = []
@@ -113,7 +125,7 @@ def load_entries(run_log, target):
         except ValueError:
             print(f"  경고: run_log {n}행이 JSON 이 아니다 — 무시: {line[:80]}")
             continue
-        stamp = str(obj.get("ended_at") or obj.get("started_at") or "")
+        stamp = str(obj.get("started_at") or obj.get("ended_at") or "")
         if stamp.startswith(target):
             entries.append((n, obj))
     return entries

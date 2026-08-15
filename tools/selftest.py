@@ -21,6 +21,7 @@
 """
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -135,6 +136,23 @@ def edit(path, old, new):
     w(path, t.replace(old, new))
 
 
+def bump_score(path, delta):
+    """axes.md 첫 「**점수판** 지지 N」 을 N+delta 로 바꾼다 (복원은 -delta).
+
+    시드 수치를 하드코딩하지 않는다 — 종전에는 「지지 12」 를 문자열로 박아 두어,
+    **설치본이 실제로 한 번이라도 루틴을 돌리면 selftest 전체가 픽스처 오류로
+    죽었다** (2026-08-15 맥 앱 실측, 이슈 #33: 관측 등재로 지지 12→14 가 되자
+    이 케이스에서 RuntimeError 로 중단 — 도구층 검증이 영구히 막혔다).
+    점수판은 매 실행 갱신되는 값이라 시험은 현재값에서 출발해야 한다.
+    """
+    t = io.open(path, encoding="utf-8").read()
+    m = re.search(r"(\*\*점수판\*\*\s*지지\s*)(\d+)", t)
+    if not m:
+        raise RuntimeError(f"시험 픽스처 오류 — {os.path.basename(path)} 에 "
+                           "「**점수판** 지지 N」 이 없다")
+    w(path, t[:m.start()] + m.group(1) + str(int(m.group(2)) + delta) + t[m.end():])
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="kit-selftest-")
     try:
@@ -186,9 +204,18 @@ def main():
             {"event": "end", "started_at": "2026-09-01T07:00:00",
              "ended_at": "2026-09-01T08:00:00", "mode": "생산", "result": "산출",
              "gates": GATES_FULL[:-1] + ["check_publish:1"]},
+            # 자정을 넘긴 실행 — 짝은 started_at 으로 맞춘다 (2026-08-15 실측, 이슈 #33).
+            # ended_at 으로 날짜를 가르면 이 두 줄이 09-07/09-08 로 갈려,
+            # 게이트를 전종 돌린 실행이 「게이트 기록 없는 발행」 으로 오진됐다.
+            {"event": "start", "started_at": "2026-09-07T23:50:00",
+             "session": "session-cron", "mode": "미정"},
+            {"event": "end", "started_at": "2026-09-07T23:50:00",
+             "ended_at": "2026-09-08T00:30:00", "mode": "생산", "result": "산출",
+             "gates": GATES_FULL},
         ]
         w(j("output", "ledger", "run_log.jsonl"),
           "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
+        w(j("output", "web", "2026-09-07.html"), "<h1>x</h1>")   # 자정 넘김 호
 
         # check_theme — data-macro 정상 / 오타
         w(j("output", "web", "2026-09-02.html"), THEME_PAGE.format(macro="M2A"))
@@ -239,6 +266,10 @@ def main():
              ["--date", "2026-08-31", tmp], 1, None, None),
             ("run 실패코드 :1 기록", "check_run.py",
              ["--date", "2026-09-01", tmp], 1, None, None),
+            ("run 자정 넘긴 실행 — 시작일에서 짝이 잡힌다", "check_run.py",
+             ["--date", "2026-09-07", tmp], 0, None, None),
+            ("run 자정 넘긴 실행 — 종료일은 안 돈 날이다", "check_run.py",
+             ["--date", "2026-09-08", tmp], 1, None, None),
             ("theme data-macro 정상(MA1)", "check_theme.py",
              ["output/web/2026-09-03.html"], 0, None, None),
             ("theme data-macro 오타(M2A)", "check_theme.py",
@@ -249,8 +280,8 @@ def main():
                                     encoding="utf-8").read().replace("f-055", "f-098")),
              lambda: os.remove(F98)),
             ("ledger 점수판 오기", "check_ledger.py", [tmp], 1,
-             lambda: edit(A, "**점수판** 지지 12", "**점수판** 지지 13"),
-             lambda: edit(A, "**점수판** 지지 13", "**점수판** 지지 12")),
+             lambda: bump_score(A, +1),
+             lambda: bump_score(A, -1)),
             ("sync 유닉스 경로 누출", "sync_skill.py",
              ["--check", j("master-leaky.md")], 1, None, None),
             ("sync 클린 마스터 (--check 무기록)", "sync_skill.py",

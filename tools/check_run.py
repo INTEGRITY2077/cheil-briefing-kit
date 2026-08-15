@@ -51,6 +51,10 @@ run_log(output/ledger/run_log.jsonl)의 해당 날짜 항목과 산출물 실존
            실패로도 기록돼 있지 않다 (돌았다는 기록 vs 실체 불일치)
   실패(1)  기록된 실패 — run_log 가 스스로 실패/중단을 기록했다 (정직하지만 실패)
   실패(1)  기록 없음 — run_log 에 해당 날짜 항목이 없다 (안 돈 날)
+  실패(1)  판정 불가 기록 — 로스터 게이트가 `이름:2` 로 기록됐다 (2026-08-15 이슈 #37).
+           `:2` 는 게이트가 「모르겠다」로 끝난 것이라 통과가 아니지만 「기록된 실패」와도
+           다르다 — 별도 메시지로 가른다. 이 스크립트 자신의 종료코드는 0/1 그대로다:
+           원장을 읽는 정적 검사라 판정 불가가 생길 자리가 없다
 
 run_log.jsonl 한 줄 형식 (루틴 SKILL 「실행 원장」 절이 정본):
   시작 줄  {"event":"start","started_at":ISO8601,"session":...,"mode":"생산|검증|미정"}
@@ -399,6 +403,49 @@ def has_production_record(entries):
     return False
 
 
+# 「수동 확인 마감」의 **기계 표식** (2026-08-15 신설 — 검수 문제 4·9).
+# 문제: routine-SKILL 4b ⑤ 와 아래 실패 문안은 「확인 시각·경위가 reason 에 남아
+# 있어야 한다」고 요구하면서, 게이트는 reason 을 **읽지 않았다**. 기계가 구분할 수
+# 있는 상태가 없으니 :2 로 끝난 날짜는 영구히 exit 1 이었고 — routine-SKILL 이
+# 「구분이 없으면 CF 회선에서 호 마감이 영구히 불가능해진다」고 적어 둔 바로 그
+# 상태가 문구만 바뀐 채 그대로였다 — 그 압력이 `:2` 대신 `:0` 을 적게 만든다.
+# 황금률 ③ 대로 기계는 **형식과 봉인만** 본다: 확인이 진짜였는지는 판정하지 않고,
+# 「누가·언제·무엇을 확인했다」가 적힌 형식인지만 본다. 진위는 사람의 기록이다.
+MANUAL_CLOSE_MARK = "수동 확인 마감"
+MANUAL_CLOSE_TIME = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}")
+MANUAL_CLOSE_MIN_WHY = 15   # 경위 최소 글자수 — 「확인함」 한 마디를 봉인으로 치지 않는다
+MANUAL_CLOSE_FORM = ('"reason": "수동 확인 마감 <YYYY-MM-DD HH:MM> '
+                     '<판정 불가 게이트 이름 전부> — 확인 경위(무엇을 어디서 어떻게 봤는가)"')
+
+
+def manual_close_gap(entry, gates):
+    """종료 줄이 「수동 확인 마감」 형식을 갖췄으면 None, 아니면 미달 사유.
+
+    요구는 넷이고 전부 형식이다: ⓐ 표식 문자열 ⓑ 확인 시각(YYYY-MM-DD HH:MM)
+    ⓒ 판정 불가로 끝난 게이트 이름 전수 — 어느 게이트를 사람이 대신 확인했는지
+    붙어 있지 않으면 봉인이 아니다 ⓓ 표식·시각·게이트명을 뺀 경위 문구.
+    """
+    reason = str((entry or {}).get("reason") or "").strip()
+    if not reason:
+        return "종료 줄에 reason 이 없다"
+    if MANUAL_CLOSE_MARK not in reason:
+        return f"reason 에 「{MANUAL_CLOSE_MARK}」 표식이 없다"
+    if not MANUAL_CLOSE_TIME.search(reason):
+        return "reason 에 확인 시각(YYYY-MM-DD HH:MM)이 없다"
+    absent = [g for g in gates if g not in reason]
+    if absent:
+        return ("reason 이 어느 게이트를 사람이 대신 확인했는지 밝히지 않았다 — "
+                "빠진 이름: " + ", ".join(absent))
+    rest = reason.replace(MANUAL_CLOSE_MARK, " ")
+    rest = MANUAL_CLOSE_TIME.sub(" ", rest)
+    for g in gates:
+        rest = rest.replace(g, " ")
+    if len(re.sub(r"[\s—\-–:·,.\[\]()]+", "", rest)) < MANUAL_CLOSE_MIN_WHY:
+        return (f"reason 에 확인 경위가 없다 — 표식·시각·게이트명을 빼고 "
+                f"{MANUAL_CLOSE_MIN_WHY}자 이상이어야 한다")
+    return None
+
+
 def main():
     target, kit_root, profile = parse_args(sys.argv[1:])
     run_log = os.path.join(kit_root, "output", "ledger", "run_log.jsonl")
@@ -450,7 +497,12 @@ def main():
                 name, _, code = str(g).partition(":")
                 recorded[name.strip()] = code.strip()
             missing = [r for r in roster if r not in recorded]
-            nonzero = [r for r in roster if recorded.get(r) not in (None, "0")]
+            # 종료코드 3분법 (2026-08-15 이슈 #37) — :2 는 「판정 불가」다.
+            # 여전히 차단하되(판정 불가는 통과가 아니다) **다른 사유**로 가른다:
+            # 「기록된 실패」와 「게이트가 모르겠다고 끝난 것」은 처방이 다르다.
+            undecided = [r for r in roster if recorded.get(r) == "2"]
+            nonzero = [r for r in roster
+                       if recorded.get(r) not in (None, "0", "2")]
             if missing:
                 print("실패: 게이트 기록이 로스터에 미달한다 — 빠진 게이트: "
                       + ", ".join(missing)
@@ -462,6 +514,27 @@ def main():
                       + ", ".join(f"{r}:{recorded[r]}" for r in nonzero)
                       + " (실패한 게이트를 기록한 채 발행했다)")
                 return 1
+            if undecided:
+                # 「수동 확인 마감」은 기계가 **구분할 수 있는 상태**다 (2026-08-15
+                # 수리 — 검수 문제 4·9). 형식이 갖춰지지 않았으면 종전대로 막는다.
+                gap = manual_close_gap(o, undecided)
+                if gap:
+                    print("실패: 로스터 게이트가 판정 불가(:2)로 미완결이다 — "
+                          + ", ".join(f"{r}:2" for r in undecided)
+                          + " (이슈 #37 — 「기록된 실패」가 아니라 게이트가 「모르겠다」로 "
+                          "끝난 것이다. 판정 불가는 통과가 아니므로 여기서 막지만, 처방이 "
+                          "다르다: 산출물을 고치지 말고 **판정 경로**를 고쳐라 — 다른 회선에서 "
+                          "재판정해 :0 으로 다시 기록한다.) 재판정이 안 되면 소유자가 "
+                          "브라우저로 공유·핀을 직접 확인하고 「수동 확인 마감」을 종료 줄 "
+                          f"reason 에 적어라 — 지금 미달: {gap}. 형식: {MANUAL_CLOSE_FORM}")
+                    return 1
+                print("고지: 수동 확인 마감으로 닫은 날이다 — "
+                      + ", ".join(f"{r}:2" for r in undecided)
+                      + f" 는 기계가 판정하지 못했고, 사람이 직접 확인한 기록이 형식대로 "
+                      f"reason 에 남아 있다: 「{str(o.get('reason'))[:80]}」. "
+                      "이 통과는 **공유 상태에 대한 기계의 판정이 아니라 형식 봉인**이다 "
+                      "(황금률 ③). 회선이 회복되면 :0 으로 재판정해 기록을 갱신하라 "
+                      "(이슈 #37 · 검수 문제 4·9)")
         # 소스 로스터 봉인 (이슈 #36) — 상시 소스 전수가 그날 돌았는가.
         # 면제는 **그날 생산 기록이 없을 때**만이다 (2026-08-15 수리 — 검수 문제 2·17).
         # 종전에는 「그날 항목 중 quiet_day·검증만 이 하나라도 있으면」 면제라,

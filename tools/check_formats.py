@@ -51,7 +51,23 @@
   표준라이브러리 urllib.request 만 쓴다 — 새 의존성 없음. UA 는 통상 브라우저
   문자열을 쓴다 (실측: 비정상 UA 는 CDN 이 403 으로 거른다 — 판정이 오염된다).
 
-실패 시 종료코드 1. 경고만 있으면 0.
+종료코드 3분법 (2026-08-15 — 이슈 #37 을 이 게이트에도 편다, 검수 문제 6):
+  0  통과 (경고만 있어도 0)
+  1  **판정 결과 실패** — 정적 판정 위반, 또는 물어봐서 「아니오」를 받았다
+  2  **판정 불가** — `--check-links` 의 익명 GET 이 CF 봇 차단 챌린지를 받아
+     공유 상태를 물어보지 못했다. 통과가 아니다(#21 회귀 금지) — run_log 에
+     `check_formats:2` 로 남고 check_run 로스터 대조가 막는다.
+     실패와 판정 불가가 함께 있으면 1 이다(답을 받은 쪽이 판정이다).
+
+이 3분법의 한계 (2026-08-15 명시 — 검수 문제 7):
+  (a) 3분법을 쓰는 게이트는 `check_publish`(E6)와 이 파일의 `--check-links`(E7)
+      **둘뿐**이다. 다른 게이트는 종전대로 0/1 만 낸다.
+  (b) CF 판정은 `CF_BODY_MARKS`·`cf-mitigated` 라는 **문자열 휴리스틱**이다 —
+      CF 가 문구를 바꾸면 다시 「공유 OFF」로 오진한다. 판정의 근거가 아니라
+      오진 방지 장치로만 읽어라.
+  (c) 이 수리는 오진을 막을 뿐 **CF 회선에서 공유 상태를 판정해 주지 않는다.**
+      2 를 받은 호의 공유 여부는 여전히 미지다 — 다른 회선 재판정, 또는 소유자
+      직접 확인 + 「수동 확인 마감」 기록(routine-SKILL 4b ⑤)이 유일한 닫는 길이다.
 """
 import io, os, re, sys
 
@@ -105,24 +121,115 @@ FRAME_API_HEADERS = {"X-Frame-CP": "go", "X-Frame-Platform": "web",
                      "X-Frame-Surface": "standalone"}
 
 
-def fetch_anon(url, extra_headers=None):
+# CF(Cloudflare) 봇 차단 챌린지 표식 — 이슈 #37. 2026-08-15 실측: 맥 회선에서
+# CF 가 /api/frame 에 403 을 주자 E6 가 「공유 OFF」로 오진했고(E5 처방 = MP3
+# 재이식·재발행 지시까지 갔다), **대조군(무작위 uuid)도 같은 403 을 받아** #21 의
+# 자기검증이 조용히 통과했다. 챌린지는 판정 결과가 아니라 **판정 경로가 막힌 상태**다.
+CF_BODY_MARKS = ("just a moment", "challenges.cloudflare.com", "cf-mitigated")
+CF_HEADER = "cf-mitigated"
+
+# 종료코드 3분법을 이 게이트(E7 `--check-links`)에도 편다 (2026-08-15 — 검수 문제 6).
+# 종전에는 check_publish 한 게이트에만 3분법이 있었고, 같은 회선의 형제 게이트인
+# 여기는 CF 403/503 을 곧바로 「공유 OFF 의심」 exit 1 로 찍었다. 그러면 맥 CF 회선
+# 에서 E6 는 정직하게 2 로 끝나는 같은 순간 E7 이 1 로 끝나 run_log 에
+# `check_formats:1` 이 남고, 실행자는 E1/E7 문안대로 공유를 다시 켜고 재발행하러
+# 간다 — 이슈 #37 이 「멀쩡한 호를 고치게 한다」고 적은 바로 그 행동이다.
+# 판정 불가를 통과로 접지 않는다(#21 회귀 아님) — 통과도 실패도 아닌 2 로 끝낸다.
+UNDECIDED = 2
+UNDECIDED_MARK = "[판정 불가] "
+
+
+def undecided_msg(what, code, why):
+    """판정 불가 사유 한 줄 — 앞머리 `UNDECIDED_MARK` 가 분류 표식이다."""
+    return (f"{UNDECIDED_MARK}{what} 조회가 봇 차단 페이지였다 (HTTP {code} · {why}) — "
+            "공유 상태를 판정하지 못했다. 공유를 다시 켜거나 재발행하지 마라: 이 응답은 "
+            "공유에 대해 아무것도 증언하지 않는다. 다른 회선에서 재판정하거나, 소유자가 "
+            "브라우저에서 직접 확인하고 기록하라 (이슈 #37 · routine-SKILL 4b ⑤)")
+
+
+def _hdr_dict(headers):
+    """응답 헤더를 소문자 키 dict 로 — email.message.Message·None 모두 받는다."""
+    out = {}
+    try:
+        for k, v in (headers.items() if headers is not None else ()):
+            out[str(k).lower()] = str(v)
+    except Exception:
+        pass
+    return out
+
+
+def cf_challenge(body, headers=None, code=None):
+    """CF 봇 차단 페이지면 사유 문자열, 아니면 None (이슈 #37).
+
+    호출부는 이것을 **실패가 아니라 판정 불가**로 다뤄야 한다 — 이 응답은 공유
+    상태에 대해 아무것도 증언하지 않는다 (403 이어도 공유는 켜져 있을 수 있다).
+
+    `code` 로 좁힌다 (2026-08-15 수리 — 검수 문제 1·8). 본문 표식은 **문자열
+    휴리스틱**이라 지면이 CF 를 인용하기만 해도 걸린다: `code == 200` 이면 본문
+    표식을 보지 않는다. 실측 근거 — `check_publish` ③ 이 넘기는 fbody 는 그 호의
+    **발행본 HTML 자체**라, 지면에 「just a moment」·challenges.cloudflare.com 이
+    한 번이라도 실리면 HTTP 200 정상 응답이 판정 불가(2)로 접히고, 새 호 마감
+    규칙상 그 호는 기계로 영영 닫히지 않는다.
+    헤더(`cf-mitigated`)는 CF 가 붙이는 것이라 200 에서도 그대로 CF 로 본다 —
+    지면이 흉내 낼 수 없는 표식이다. `code=None`(코드 불명·네트워크 오류)이면
+    종전대로 본문까지 본다 — 좁힐 근거가 없는 자리에서 넓게 잡는 쪽이 안전하다.
+    """
+    hdrs = headers if isinstance(headers, dict) else _hdr_dict(headers)
+    if CF_HEADER in hdrs:
+        return f"응답 헤더 {CF_HEADER}: {hdrs[CF_HEADER][:40]}"
+    if code == 200:
+        return None   # 정상 응답의 본문 인용은 챌린지가 아니다 (검수 문제 8)
+    low = (body or "").lower()
+    for mark in CF_BODY_MARKS:
+        if mark in low:
+            return f"응답 본문에 「{mark}」(HTTP {code})"
+    return None
+
+
+def fetch_anon(url, extra_headers=None, with_headers=False):
     """익명 GET — 쿠키 없음, UA 명시, timeout 10초. (HTTP코드, 본문) 반환.
 
     표준라이브러리만 쓴다. urllib 은 쿠키 저장소를 따로 달지 않는 한 쿠키를
     보내지 않으므로 그 자체로 '로그아웃 독자' 시뮬레이션이 된다.
+
+    `with_headers=True` 면 **(HTTP코드, 본문, 헤더dict)** 3-튜플을 준다 (이슈 #37).
+    CF 챌린지는 403/503 의 **본문·cf-mitigated 헤더로만** 식별되는데, 종전 갈래는
+    HTTPError 본문을 버리고(`return e.code, ""`) 헤더는 애초에 돌려주지 않아
+    「봇 차단」과 「공유 OFF」를 구분할 재료가 호출부에 없었다. 기본값은 종전
+    2-튜플 그대로다 — **2-튜플 계약 자체가 불변**이라는 뜻이고, 이 파일·
+    check_publish 의 호출부는 모두 `with_headers=True` 로 옮겼다 (2026-08-15
+    수리 — 검수 문제 2·5·6: 종전 독스트링은 「기존 호출부 check_formats 6곳·
+    check_publish 2곳 계약 불변」이라고 적었으나 같은 diff 에서 check_publish
+    2곳은 이미 3-튜플로 바뀌어 있었고, 남은 check_formats 6곳이 2-튜플이라
+    CF 403 을 (403,"") 로 받아 「공유 OFF 의심」 exit 1 을 냈다).
+    2-튜플 갈래는 외부/후속 호출부를 위해 남겨 둔다 — 지금 이 저장소 안에서
+    쓰는 곳은 없다.
     """
     import urllib.request, urllib.error
     headers = dict(ANON_HEADERS)
     if extra_headers:
         headers.update(extra_headers)
     req = urllib.request.Request(url, headers=headers)
+
+    def out(code, body, hdrs):
+        return (code, body, hdrs) if with_headers else (code, body)
+
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
-            return r.getcode(), r.read().decode("utf-8", "replace")
+            return out(r.getcode(), r.read().decode("utf-8", "replace"),
+                       _hdr_dict(r.headers))
     except urllib.error.HTTPError as e:
-        return e.code, ""
+        # HTTPError 는 그 자체가 응답 객체다 — 챌린지 본문·헤더가 여기 있다.
+        # 기본 갈래는 종전대로 본문을 버린다 (호출부 계약 불변).
+        if not with_headers:
+            return e.code, ""
+        try:
+            body = e.read().decode("utf-8", "replace")
+        except Exception:
+            body = ""
+        return e.code, body, _hdr_dict(getattr(e, "headers", None))
     except Exception as e:  # URLError·timeout 등 — 판정 불가도 통과가 아니다
-        return None, str(e)
+        return out(None, str(e), {})
 
 
 def title_probes(title):
@@ -155,20 +262,30 @@ def published_body(artifact_url):
     이슈 #21 — 게이트가 로컬 파일과 링크 대상만 보고 발행본을 보지 않아,
     핀이 옛 버전에 남은 채 게이트 전종이 초록이었다 (2026-08-13 실측: V4 를
     발행하고 핀은 V3 — 독자에게 덱 링크가 없었다).
+
+    오류 문자열이 `UNDECIDED_MARK` 로 시작하면 **판정 결과 실패가 아니라 판정
+    불가**다 (2026-08-15 수리 — 검수 문제 2·6).
     """
     m = CODE_ARTIFACT.match(artifact_url.strip())
     if not m:
         return f"아티팩트 URL 형식이 아니다: {artifact_url[:60]}", None
     uuid = m.group(1).lower()
-    code, body = fetch_anon(f"https://claude.ai/api/frame/{uuid}?via=user_open",
-                            FRAME_API_HEADERS)
+    code, body, hdr = fetch_anon(f"https://claude.ai/api/frame/{uuid}?via=user_open",
+                                 FRAME_API_HEADERS, with_headers=True)
+    why = cf_challenge(body, hdr, code)
+    if why:
+        return undecided_msg("발행본 메타", code, why), None
     if code != 200:
         return f"발행본 메타 조회 실패(HTTP {code}) — 공유 OFF 또는 없는 아티팩트", None
     vm = re.search(r'"ver"\s*:\s*"([^"]+)"', body)
     if not vm:
         return "발행본 메타에 ver 가 없다 — 응답 형식 변경 의심", None
-    fcode, fbody = fetch_anon(
-        f"https://{uuid}.frame.claudeusercontent.com/_f/{vm.group(1)}")
+    fcode, fbody, fhdr = fetch_anon(
+        f"https://{uuid}.frame.claudeusercontent.com/_f/{vm.group(1)}",
+        with_headers=True)
+    fwhy = cf_challenge(fbody, fhdr, fcode)
+    if fwhy:
+        return undecided_msg("발행본 본문", fcode, fwhy), None
     if fcode != 200:
         return f"발행본 본문 조회 실패(HTTP {fcode})", None
     return None, fbody
@@ -186,14 +303,23 @@ def self_artifact_url(html_path):
 
 
 def check_link_open(label, url, title):
-    """한 링크를 익명으로 열어 ①공유 개통 ②호 제목 포함을 판정. 오류 문자열 또는 None."""
+    """한 링크를 익명으로 열어 ①공유 개통 ②호 제목 포함을 판정. 오류 문자열 또는 None.
+
+    네 개의 익명 GET 전부 `with_headers=True` 로 받아 `cf_challenge` 를 건다
+    (2026-08-15 수리 — 검수 문제 2·6: `cf_challenge` 를 소유한 파일이 정작 그것을
+    쓰지 않아, CF 403 을 (403,"") 로 받고 「공유 OFF 의심」 exit 1 을 냈다).
+    반환 문자열이 `UNDECIDED_MARK` 로 시작하면 판정 불가다.
+    """
     probes = title_probes(title)
     m = CODE_ARTIFACT.match(url)
     if m:
         # claude.ai 아티팩트: 셸 페이지는 없는 uuid 도 200 이라(실측) /api/frame 으로 판정
         uuid = m.group(1).lower()
-        code, body = fetch_anon(f"https://claude.ai/api/frame/{uuid}?via=user_open",
-                                FRAME_API_HEADERS)
+        code, body, hdr = fetch_anon(f"https://claude.ai/api/frame/{uuid}?via=user_open",
+                                     FRAME_API_HEADERS, with_headers=True)
+        why = cf_challenge(body, hdr, code)
+        if why:
+            return undecided_msg(f"[{label}] 링크 메타", code, why)
         if code is None:
             return f"[{label}] 링크 검사 자체가 실패했다 (네트워크: {body[:80]}) — 판정 불가는 통과가 아니다"
         if code != 200:
@@ -203,8 +329,12 @@ def check_link_open(label, url, title):
         # 제목이 메타 JSON 에 없으면 본문 frame 을 ver 로 유도해 한 단계만 따라간다
         vm = re.search(r'"ver"\s*:\s*"([^"]+)"', body)
         if vm:
-            fcode, fbody = fetch_anon(
-                f"https://{uuid}.frame.claudeusercontent.com/_f/{vm.group(1)}")
+            fcode, fbody, fhdr = fetch_anon(
+                f"https://{uuid}.frame.claudeusercontent.com/_f/{vm.group(1)}",
+                with_headers=True)
+            fwhy = cf_challenge(fbody, fhdr, fcode)
+            if fwhy:
+                return undecided_msg(f"[{label}] 본문 frame", fcode, fwhy)
             if fcode == 200 and any(p in fbody for p in probes):
                 return None
             if fcode != 200:
@@ -212,7 +342,10 @@ def check_link_open(label, url, title):
         return f"[{label}] 익명 응답에 호 제목 「{probes[-1]}」 이 없다 — 다른 호가 걸렸거나 옛 버전 핀 의심"
 
     # 일반 URL: 직접 GET → 200 + 제목, 없으면 응답 속 frame URL 을 한 단계 따라간다
-    code, body = fetch_anon(url)
+    code, body, hdr = fetch_anon(url, with_headers=True)
+    why = cf_challenge(body, hdr, code)
+    if why:
+        return undecided_msg(f"[{label}] 링크", code, why)
     if code is None:
         return f"[{label}] 링크 검사 자체가 실패했다 (네트워크: {body[:80]}) — 판정 불가는 통과가 아니다"
     if code != 200:
@@ -221,7 +354,10 @@ def check_link_open(label, url, title):
         return None
     fm = FRAME_URL.search(body)
     if fm:
-        fcode, fbody = fetch_anon(fm.group(0).replace("\\/", "/"))
+        fcode, fbody, fhdr = fetch_anon(fm.group(0).replace("\\/", "/"), with_headers=True)
+        fwhy = cf_challenge(fbody, fhdr, fcode)
+        if fwhy:
+            return undecided_msg(f"[{label}] 본문 frame", fcode, fwhy)
         if fcode == 200 and any(p in fbody for p in probes):
             return None
         if fcode != 200:
@@ -269,6 +405,11 @@ def main():
     segs = ([(tag.lower(), attrs, text_of(body)) for tag, attrs, body in SEG.findall(bar.group(1))]
             if bar else [])
     errors, warnings = [], []
+    undecided = []   # 판정 불가 (이슈 #37 3분법 — 검수 문제 6). 실패와 섞지 않는다
+
+    def report(msg):
+        """판정 불가 표식이면 판정 불가 통에, 아니면 실패 통에."""
+        (undecided if msg.startswith(UNDECIDED_MARK) else errors).append(msg)
 
     # 덱 요구의 정본은 **의도**다 — 루틴이 EVAL 판정(심층=덱 생산)에 따라
     # --expect-deck / --no-deck 을 넘긴다 (이슈 #5: 파일 실존 추론은 '덱을 만들고
@@ -336,7 +477,7 @@ def main():
             for label, url in links:
                 err = check_link_open(label, url, title)
                 if err:
-                    errors.append(err)
+                    report(err)
                 else:
                     print(f"링크 개통: [{label}] 익명 200 + 제목 확인")
 
@@ -349,7 +490,9 @@ def main():
                               " 발행 절차가 URL 기록을 빠뜨렸다 (이슈 #21)")
             else:
                 perr, pbody = published_body(self_url)
-                if perr:
+                if perr and perr.startswith(UNDECIDED_MARK):
+                    undecided.append(perr)   # 봇 차단은 「발행본 대조 실패」가 아니다
+                elif perr:
                     errors.append(f"발행본 대조 실패: {perr} (이슈 #21)")
                 else:
                     if not any(p in pbody for p in title_probes(title)):
@@ -369,6 +512,15 @@ def main():
         print("실패:", e)
     if errors:
         sys.exit(1)
+    # 판정 불가는 실패 뒤에 본다 — 「물어봤고 아니라고 답을 받은」 항목이 하나라도
+    # 있으면 그것이 판정이다. 실패가 없고 판정 불가만 남았을 때가 2 다 (이슈 #37).
+    if undecided:
+        for u in undecided:
+            print("판정 불가:", u)
+        print("판정 불가로 끝났다 — 통과가 아니고 실패도 아니다. run_log 종료 줄에 "
+              "「check_formats:2」 로 기록하라 (check_run 이 미완결로 막는다). "
+              "산출물을 고치지 말고 **판정 경로**를 고쳐라 — 이슈 #37")
+        sys.exit(UNDECIDED)
     suffix = " · 익명 개통 확인" if check_links else ""
     if bar:
         print(f"통과: 판형 세그먼트 {len(segs)}개 · 현재 판형 「{on[0][2]}」 · 링크 전부 유효{suffix}")

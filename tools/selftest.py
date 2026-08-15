@@ -41,10 +41,15 @@ TODAY = date.today().isoformat()
 EXEMPT_DATE = TODAY          # 산출+검증만 이 겹친 날 — 면제되면 안 되는 날
 VERIFY_ONLY = "2026-09-11"   # 생산 기록 없이 검증만 한 날 — 면제 대상
 # 다른 픽스처가 쓰는 고정 날짜와 오늘이 겹치면 케이스끼리 원장을 오염시킨다 — 시끄럽게 죽인다.
+CF_DATE = "2026-09-14"       # CF 챌린지 합성 케이스의 호 (이슈 #37)
+UNDECIDED_DATE = "2026-09-15"  # gates 에 check_publish:2 · reason 형식 미달 (이슈 #37)
+CFL_DATE = "2026-09-16"      # check_formats --check-links 합성 케이스의 호 (검수 문제 6)
+MANUAL_DATE = "2026-09-17"   # :2 + 「수동 확인 마감」 형식을 갖춘 날 (검수 문제 4·9)
 _FIXED = {"2026-08-20", "2026-08-21", "2026-08-22", "2026-08-23", "2026-08-24",
           "2026-08-25", "2026-08-26", "2026-08-30", "2026-08-31", "2026-09-01",
           "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05", "2026-09-06",
-          "2026-09-07", "2026-09-08", VERIFY_ONLY, "2026-09-12", "2026-09-13"}
+          "2026-09-07", "2026-09-08", VERIFY_ONLY, "2026-09-12", "2026-09-13",
+          CF_DATE, UNDECIDED_DATE, CFL_DATE, MANUAL_DATE}
 if TODAY in _FIXED:
     raise SystemExit(f"selftest 픽스처 충돌 — 오늘({TODAY})이 고정 픽스처 날짜와 겹친다. "
                      "고정 날짜 집합을 옮겨라")
@@ -133,6 +138,74 @@ THEME_EVAL = """| 단위 | 요지 | 판정 | 근거 |
 THEME_PAGE = """<h1>시험 화두</h1>
 <section class="sec" data-macro="{macro}" data-axis="시험 축"><h2>시험</h2></section>
 """
+
+# CF 챌린지 케이스용 합성 스텁 (2026-08-15 신설 — 이슈 #37, 2026-08-15 재설계 — 검수 문제 3).
+# **네트워크를 타지 않는다**: 진짜 check_formats 를 그대로 재수출하고 **urlopen 층**만
+# 갈아끼운다 — `fetch_anon` 은 정본이 돈다.
+#
+# 왜 fetch_anon 스텁을 버렸나 (검수 문제 3): 종전 스텁은 `fetch_anon` 을 통째로
+# 갈아끼워, 이번 수리의 하중 지점인 `check_formats.fetch_anon` 의 HTTPError 갈래
+# (`e.read()` 로 챌린지 본문을, `getattr(e,'headers')` 로 헤더를 회수하는 곳)가 한
+# 번도 실행되지 않았다. 실제 CF 회선에서 탐지가 성립하는지는 전적으로 그 갈래에
+# 달려 있는데 시험이 없었다. urlopen 에 HTTPError(챌린지 본문·헤더 포함)를 세우면
+# 네트워크 없이 그 갈래가 덮인다 — CF 403 은 urllib 에서 예외로 도착하기 때문이다.
+#
+# @SEQ@ 는 (코드, 본문, 헤더dict) 응답 대본이다. 대본이 다 떨어지면 마지막 항목을
+# 계속 돌려준다. 코드 200 은 정상 응답으로, 그 외는 HTTPError 로 세운다.
+CF_STUB = '''# -*- coding: utf-8 -*-
+"""selftest 합성 스텁 — 정본 check_formats 를 재수출하고 urlopen 만 갈아끼운다."""
+import email.message
+import io as _io
+import sys
+import urllib.request
+import urllib.error
+import urllib.response
+
+from check_formats_real import *  # noqa: F401,F403
+from check_formats_real import (FRAME_API_HEADERS, cf_challenge,  # noqa: F401
+                                fetch_anon, main)
+
+SEQ = @SEQ@
+_n = [0]
+
+
+def _msg(d):
+    m = email.message.Message()
+    for k, v in (d or {}).items():
+        m[k] = v
+    return m
+
+
+def _urlopen(req, timeout=None, **kw):
+    i = min(_n[0], len(SEQ) - 1)
+    _n[0] += 1
+    code, body, hdrs = SEQ[i]
+    url = getattr(req, "full_url", None) or str(req)
+    raw = body.encode("utf-8")
+    if code == 200:
+        return urllib.response.addinfourl(_io.BytesIO(raw), _msg(hdrs), url, 200)
+    # 실제 CF 403/503 은 여기로 도착한다 — 정본 fetch_anon 의 HTTPError 갈래를 태운다
+    raise urllib.error.HTTPError(url, code, "stub", _msg(hdrs), _io.BytesIO(raw))
+
+
+urllib.request.urlopen = _urlopen
+
+if __name__ == "__main__":
+    main()
+'''
+
+# 대본 조각 — 케이스에서 조립한다.
+CF_BODY = ("<html><head><title>Just a moment...</title></head>"
+           "<body>challenges.cloudflare.com</body></html>")
+R_401 = (401, "", {})                                   # 정상 회선의 「없는 uuid」
+R_CF_HDR = (403, CF_BODY, {"cf-mitigated": "challenge"})  # 헤더까지 붙은 챌린지
+R_CF_BODY = (403, CF_BODY, {})                          # 헤더 없는 챌린지 — 본문 표식만
+FMT_TITLE = "시험 호 — 오늘의 제일기획 뉴스 09.16"
+FMT_LINK = "https://claude.ai/code/artifact/00000000-0000-4000-8000-000000000002"
+# 지면이 CF 를 인용한 200 응답 — 판정 불가로 접히면 안 된다 (검수 문제 1·8)
+R_META_OK = (200, '{"mode":"public","ver":"v1"}', {})
+R_BODY_CITES_CF = (200, "<h1>x</h1> Just a moment 와 challenges.cloudflare.com "
+                        "을 인용한 오늘 호 지면", {})
 
 MASTER_CLEAN = ("# 킷 위치\n/tmp/somewhere/kit\n\n# 본문\n"
                 "https://dart.fss.or.kr/api/todayRSS.xml 를 본다.\n")
@@ -394,12 +467,46 @@ def main():
             {"event": "end", "started_at": "2026-09-13T07:00:00",
              "ended_at": "2026-09-13T08:00:00", "mode": "생산", "result": "산출",
              "gates": GATES_FULL},
+            # 판정 불가 기록 (2026-08-15 신설 — 이슈 #37). CF 회선에서 E6 가 :2 로
+            # 끝난 날이다. 로스터 대조는 여전히 차단하되 「기록된 실패(:1)」와는
+            # 다른 사유로 갈라야 한다 — 처방이 산출물이 아니라 판정 경로이기 때문이다.
+            {"event": "end", "started_at": UNDECIDED_DATE + "T07:00:00",
+             "ended_at": UNDECIDED_DATE + "T08:00:00", "mode": "생산", "result": "산출",
+             "gates": GATES_FULL[:-1] + ["check_publish:2"],
+             "reason": "수동 확인 마감 — 소유자가 브라우저로 공유·핀 직접 확인"},
+            # 같은 :2 인데 reason 이 **형식을 갖춘** 날 (2026-08-15 신설 — 검수 문제 4·9).
+            # 확인 시각 + 어느 게이트를 대신 확인했는지 + 경위. 위 UNDECIDED_DATE 줄은
+            # 시각도 게이트 이름도 없어 계속 차단이어야 한다 — 두 줄이 그 경계다.
+            {"event": "end", "started_at": MANUAL_DATE + "T07:00:00",
+             "ended_at": MANUAL_DATE + "T08:00:00", "mode": "생산", "result": "산출",
+             "gates": GATES_FULL[:-1] + ["check_publish:2"],
+             "reason": ("수동 확인 마감 2026-09-17 09:20 check_publish — 소유자가 사파리 "
+                        "시크릿 창에서 공유 링크를 열어 Anyone with the link 와 핀 버전이 "
+                        "오늘 호임을 확인했다 (CF 회선이라 기계 재판정 불가)")},
         ]
         w(j("output", "ledger", "run_log.jsonl"),
           "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n")
         w(j("output", "web", "2026-09-07.html"), "<h1>x</h1>")   # 자정 넘김 호
         for d in (TODAY, EXEMPT_DATE, VERIFY_ONLY, "2026-09-12", "2026-09-13"):
             w(j("output", "web", f"{d}.html"), "<h1>x</h1>")     # 소스 로스터 케이스 호
+
+        w(j("output", "web", f"{UNDECIDED_DATE}.html"), "<h1>x</h1>")
+
+        # check_publish — CF 챌린지 케이스의 호와 URL 기록 (이슈 #37).
+        # uuid 는 형식만 맞으면 된다 — 스텁이 응답을 대신하므로 실제 조회는 없다.
+        w(j("output", "web", f"{CF_DATE}.html"), "<h1>x</h1>")
+        w(j("output", f"artifact-url-{CF_DATE}.txt"),
+          "https://claude.ai/code/artifact/00000000-0000-4000-8000-000000000001\n")
+
+        # check_formats --check-links 케이스의 호 (2026-08-15 신설 — 검수 문제 6).
+        # 판형 바 + 링크 하나 + 당일 URL 기록 — 정적 판정은 통과하고 링크 판정만 갈린다.
+        w(j("output", "web", f"{CFL_DATE}.html"),
+          f"<title>{FMT_TITLE}</title><h1>x</h1>"
+          f'<div class="fmtbar"><span class="fseg on">웹 버전</span>'
+          f'<a class="fseg" href="{FMT_LINK}">라디오 버전</a></div>')
+        w(j("output", f"artifact-url-{CFL_DATE}.txt"),
+          "https://claude.ai/code/artifact/00000000-0000-4000-8000-000000000001\n")
+        w(j("output", "web", f"{MANUAL_DATE}.html"), "<h1>x</h1>")
 
         # check_theme — data-macro 정상 / 오타
         w(j("output", "web", "2026-09-02.html"), THEME_PAGE.format(macro="M2A"))
@@ -475,6 +582,24 @@ def main():
         def sweep_restore():
             if "t" in PROF_SAVED:
                 w(PROF, PROF_SAVED.pop("t"))
+
+        # CF 챌린지 케이스 (이슈 #37) — 진짜 check_formats 를 옆으로 밀어 두고 스텁을
+        # 세운다. 스텁이 정본을 재수출하므로 판정 로직은 그대로 시험되고, 네트워크는
+        # 한 번도 타지 않는다. 케이스가 끝나면 원본을 되돌린다.
+        CFM = j("tools", "check_formats.py")
+        CFM_REAL = j("tools", "check_formats_real.py")
+
+        def cf_setup(seq):
+            """seq: [(코드, 본문, 헤더dict), ...] — 대본대로 urlopen 을 세운다."""
+            def setup():
+                os.rename(CFM, CFM_REAL)
+                w(CFM, CF_STUB.replace("@SEQ@", repr(seq)))
+            return setup
+
+        def cf_restore():
+            if os.path.exists(CFM_REAL):
+                os.remove(CFM)
+                os.rename(CFM_REAL, CFM)
 
         cases = [
             ("review 정상 기록(뼈대 대상·config 부재 rubric 폴백)", "check_review.py",
@@ -578,6 +703,70 @@ def main():
             # 시드 axes.md 의 첫 행이 정확히 그 자백이므로, 경고가 떠야 한다(차단은 아님).
             ("ledger 미탐색 자백 행은 ⑥ⓒ 를 통과시키지 않는다", "check_ledger.py", [tmp], 0,
              None, None, "반증 탐색 이력에 최근 발행일"),
+            # 종료코드 3분법 (2026-08-15 신설 — 이슈 #37). 판정 불가는 0 도 1 도 아니다:
+            # 통과로 내면 깨진 것을 내보내고(#21 회귀), 실패로 내면 멀쩡한 호에 E5 처방
+            # (MP3 재이식·재발행)을 지시한다 — 실측 오진이 정확히 그것이었다.
+            ("publish 대조군이 CF 챌린지 — 대상 조회 전에 판정 불가(2)", "check_publish.py",
+             [CF_DATE], 2, cf_setup([R_CF_HDR]), cf_restore,
+             "대조군(무작위 uuid) 조회에서"),
+            ("publish 대상 조회가 CF 챌린지 — 판정 불가(2)·E5 처방 없음", "check_publish.py",
+             [CF_DATE], 2, cf_setup([R_401, R_CF_HDR]), cf_restore,
+             "!MP3 재이식"),   # 봇 차단에 E5 처방을 내면 멀쩡한 호를 고치게 된다
+            # 헤더 없는 챌린지(본문 표식만·403) — 이 갈래가 실제 CF 회선의 탐지 하중
+            # 지점이다. urlopen 층 스텁이라 정본 fetch_anon 의 HTTPError·e.read()
+            # 갈래가 실제로 돈다 (2026-08-15 신설 — 검수 문제 3).
+            ("publish 헤더 없는 CF 본문(403) — HTTPError 갈래로 판정 불가(2)", "check_publish.py",
+             [CF_DATE], 2, cf_setup([R_401, R_CF_BODY]), cf_restore,
+             "응답 본문에 「just a moment」"),
+            # 200 응답 + cf-mitigated **헤더** — 헤더는 지면이 못 붙이는 표식이라
+            # 200 에서도 CF 로 본다 (좁히기의 반대편 경계, 검수 문제 8)
+            ("publish 200 + cf-mitigated 헤더 — 판정 불가(2)", "check_publish.py",
+             [CF_DATE], 2,
+             cf_setup([R_401, (200, '{"mode":"public","ver":"v1"}',
+                               {"cf-mitigated": "challenge"})]), cf_restore,
+             "응답 헤더 cf-mitigated"),
+            # 정상 200 인데 **지면이 CF 문구를 인용**한 호 — 판정 불가로 접히면
+            # 멀쩡한 호가 새 호 마감 규칙상 기계로 영영 닫히지 않는다 (검수 문제 1·8).
+            # 재현 근거: cf_challenge('<h1>Just a moment, please</h1>', {}) 가 히트를 냈다.
+            ("publish 발행본 지면이 CF 문구를 인용해도 200 이면 통과(0)", "check_publish.py",
+             [CF_DATE], 0, cf_setup([R_401, R_META_OK, R_BODY_CITES_CF]), cf_restore,
+             "통과: 공유 ON"),
+            # E7 로스터 게이트도 같은 3분법을 쓴다 (검수 문제 2·6) — CF 회선에서
+            # E6 는 2, E7 은 1 로 갈리면 실행자는 E1/E7 문안대로 공유를 다시 켜고
+            # 재발행하러 간다. 그것이 이슈 #37 이 「멀쩡한 호를 고치게 한다」고 적은 행동이다.
+            ("formats --check-links CF 챌린지 — 판정 불가(2)", "check_formats.py",
+             [f"output/web/{CFL_DATE}.html", "--no-deck", "--check-links"], 2,
+             cf_setup([R_CF_HDR]), cf_restore, "판정 불가"),
+            ("formats --check-links CF 챌린지 — 「공유 OFF 의심」 오진 없음", "check_formats.py",
+             [f"output/web/{CFL_DATE}.html", "--no-deck", "--check-links"], 2,
+             cf_setup([R_CF_BODY]), cf_restore, "!공유 OFF 의심"),
+            # with_headers 이식이 정상 경로를 깨지 않았는가 (회귀 보호)
+            ("formats --check-links 정상 개통 — 통과(0)", "check_formats.py",
+             [f"output/web/{CFL_DATE}.html", "--no-deck", "--check-links"], 0,
+             cf_setup([(200, '{"mode":"public","title":"%s"}' % FMT_TITLE, {}),
+                       (200, '{"mode":"public","ver":"v1"}', {}),
+                       (200, FMT_TITLE + " " + FMT_LINK, {})]), cf_restore,
+             "발행본 대조"),
+            # 2 를 「판정 불가」에 내주면서 사용법 오류는 64 로 옮겼다 — 뜻이 겹치면
+            # gates 기록에서 「모르겠다」와 「인자 오타」가 구분되지 않는다.
+            ("publish 인자 형식 오류 — 사용법(64)", "check_publish.py",
+             ["not-a-date"], 64, None, None),
+            # 로스터 대조의 반대편 — :2 는 여전히 차단하되 사유가 다르다
+            ("run gates 에 check_publish:2 — 판정 불가로 미완결 차단", "check_run.py",
+             ["--date", UNDECIDED_DATE, tmp], 1, None, None, "판정 불가(:2)"),
+            # 「수동 확인 마감」의 기계 상태 (2026-08-15 신설 — 검수 문제 4·9).
+            # 종전에는 :2 를 **언제나** 1 로 막아, 수동 확인으로 닫은 날이 다음날
+            # 점검에서 영구히 실패로 남았다 — 그 압력이 :2 대신 :0 을 적게 만든다.
+            ("run :2 + 형식 갖춘 수동 확인 마감 — 형식 봉인으로 통과(0)", "check_run.py",
+             ["--date", MANUAL_DATE, tmp], 0, None, None, "수동 확인 마감으로 닫은 날"),
+            # 반대편 — 같은 :2 인데 시각·게이트명이 없으면 종전대로 차단.
+            # 자기 보고 문구 한 줄을 봉인으로 치지 않는다 (검수 문제 9 덧글).
+            ("run :2 + 시각 없는 수동 확인 문구 — 차단(형식 미달)", "check_run.py",
+             ["--date", UNDECIDED_DATE, tmp], 1, None, None, "확인 시각"),
+            # 통과 줄 꼬리 (이슈 #37 ④) — 「통과」 한 줄만 보고 넘어가는 실행자에게
+            # D8 이 검증된 임계가 아니라는 사실을 출력으로 올린다
+            ("size 통과 줄에 편집 규율 꼬리", "check_size.py",
+             ["output/web/2026-08-30.html"], 0, None, None, "D8 은 편집 규율이다"),
             ("sync 유닉스 경로 누출", "sync_skill.py",
              ["--check", j("master-leaky.md")], 1, None, None),
             ("sync 클린 마스터 (--check 무기록)", "sync_skill.py",

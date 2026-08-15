@@ -107,9 +107,15 @@ https://github.com/INTEGRITY2077/cheil-briefing-kit 를 읽고 SETUP.md 대로 �
 
 Windows · macOS · Linux — Claude Code가 도는 곳이면 어디든. 도구와 의존성은 전부
 크로스플랫폼입니다. **실측 검증: Windows 11 완료 · macOS(Apple Silicon, python 3.9) 완료**
-(2026-08-14 맥미니 실측 — selftest·TTS·게이트 전종). Linux는 미실측이니 설치 중 막히는
-지점이 있으면 이슈로 남겨 주세요. (config의 `sapi` 엔진만 Windows 전용
-옵션이며 기본 사다리에는 포함되지 않습니다.)
+(2026-08-14~15 맥미니 실측, 이슈 #33 — selftest·TTS·게이트 전종 + 앱 어포던스
+(사이드패널 브라우저·scheduled-tasks·세션 크론) 전종. **macOS 고유 결함 0건**).
+Linux는 미실측이니 설치 중 막히는 지점이 있으면 이슈로 남겨 주세요.
+(config의 `sapi` 엔진만 Windows 전용 옵션이며 기본 사다리에는 포함되지 않습니다.)
+
+설치 환경에 따라 갈리는 것은 OS가 아니라 **회선**입니다 — 아티팩트 발행은 호 전체를
+업로드하므로 상행 대역이 좁으면 큰 호가 전송 중 끊깁니다(2026-08-15 실측: 상행
+85KB/s 회선에서 3MB 호 발행 불가, 같은 회선에서 1MB는 통과). 아침 배포가 반복해서
+끊기면 호 크기(`config.yaml` 의 `tts.embed`)를 먼저 보세요.
 
 ## 주의
 

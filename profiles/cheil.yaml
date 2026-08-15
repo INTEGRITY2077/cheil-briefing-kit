@@ -103,24 +103,24 @@ sources:
       - 2-2. 연결 포괄손익계산서
       - 24. 부문별 정보
       - 25. 특수관계자 및 특수관계자와의 주요거래
-    last_checked: 2026-08-12
-    last_item: "2026.07.31 최대주주등소유주식변동신고서 (08-12 07:09 RSS 신규 0건)"
+    last_checked: 2026-08-14
+    last_item: "2026.08.14 반기보고서 (2026.06) 접수 (F-056) · 08.13 지급수단 공시 (F-058)"
 
   - id: ir-events
     tier: T1
     name: IR Events
     url: https://www.cheil.com/kr/ir/
     method: Upcoming 표에서 예정 일정을 뽑아 agenda 로 적재
-    last_checked: 2026-08-12
-    last_item: "2026-08-11~14 삼성증권 Samsung Group Asia Conference — 제일기획 IR 표기. 삼성전자 IR은 자사 참가를 08-10~12로 표기 (F-029)"
+    last_checked: 2026-08-14
+    last_item: "Upcoming 표 변동 없음 — Asia Conference(08-11~14) 마지막 날, 신규 일정 0건"
 
   - id: ir-results
     tier: T1
     name: 실적발표자료
     url: https://www.cheil.com/kr/ir/financials/result
     note: PDF 직링크 규칙이 연도 경계에서 바뀐다. 목록에서 링크를 읽고, 경로를 만들어 쓰지 않는다
-    last_checked: 2026-08-10
-    last_item: "2026년 2분기"
+    last_checked: 2026-08-14
+    last_item: "2026년 2분기 (08-14 신규 0건)"
 
   - id: broker-reports
     tier: T1
@@ -128,8 +128,8 @@ sources:
     url: https://consensus.hankyung.com/analysis/list?skinType=business
     method: 기간 지정 후 회사명 검색. PDF 는 downpdf?report_idx= 로 열린다
     note: 지역별 성장률과 해외 비계열 비중은 여기에만 있다
-    last_checked: 2026-08-12
-    last_item: "2026.07.27 유진투자증권 (08-01~08-12 신규 0건)"
+    last_checked: 2026-08-14
+    last_item: "2026.07.27 유진투자증권 (08-01~08-14 신규 0건)"
 
   - id: ad-market-stats
     tier: T1
@@ -149,16 +149,16 @@ sources:
       - https://www.brandbrief.co.kr/
       - https://www.madtimes.co.kr/
     method: 첫 화면 목록에서 신규분. 경쟁사 실적과 시장 구조 변화를 먼저 본다
-    last_checked: 2026-08-12
-    last_item: "2026-08-11 대홍기획 호치민 신규 오피스"
+    last_checked: 2026-08-14
+    last_item: "2026-08-14 버슨 림빅 인수 (F-060) · 08-13 세일즈포스 AI 커머스 조사 (F-062)"
 
   - id: client-newsroom
     tier: T2
     name: 삼성전자 뉴스룸
     url: https://news.samsung.com/kr/
     note: 광고 물량 선행지표. 언팩과 신제품 출시 일정은 agenda 로 넘긴다
-    last_checked: 2026-08-12
-    last_item: "2026-08-11 폴더블 헤리티지 전시·게임스컴 2026 참가"
+    last_checked: 2026-08-14
+    last_item: "2026-08-13 갤럭시 언팩 후속 카메라 체험 기획 (F-063)"
 
   - id: global-peers
     tier: T2
@@ -169,8 +169,8 @@ sources:
       - https://www.publicisgroupe.com/en/news/press-releases
       - https://www.group.dentsu.com/en/news/release/
     method: 목록에서 신규분. 전략 용어 변화를 키워드로 스캔한다
-    last_checked: 2026-08-12
-    last_item: "2026-08-06 WPP 2026 Interim Results (F-020). 이후 신규 없음"
+    last_checked: 2026-08-14
+    last_item: "2026-08-14 덴츠 2Q FY2026 + 중기경영계획 업데이트 (F-059). WPP·옴니콤·퍼블리시스 신규 0건"
 
   # 세계 층 상시 수집원 (2026-08-14 편입, 이슈 #28) — F-050~055 세계 스윕의 출처
   # 층을 1회성에서 상시로 승격. 큰축 MA2·MA3 의 세계 좌표는 이 두 소스가 먹인다.
@@ -188,7 +188,7 @@ sources:
       발언을 뽑는다 (F-053·F-054 계열). 실적 시즌(분기)에 집중, 평시는 신규분만.
       공식 원문(실적 보도자료·콜 자료)은 T1 로 승격해 센다 (eval-rubric 세계 층 매핑).
     last_checked: 2026-08-14
-    last_item: "2026-08 유니레버 소셜 퍼스트 공식화 (F-054)"
+    last_item: "8월 신규 발표 0건 — 4사 최신 등재물은 7월 실적 (유니레버 F-054 유지)"
 
   - id: ai-ad-supply
     tier: T2
@@ -202,7 +202,7 @@ sources:
       발표는 T1, 조사기관·해외 업계지 보도는 T2. 원문 확인 없으면 등재 금지
       (routine 1절 Verify 단계 동일 적용).
     last_checked: 2026-08-14
-    last_item: "2026-07 AdExchanger AI 미디어 스케일 기고 (F-050)"
+    last_item: "2026-08-13 챗GPT 광고 9개 시장 확장 보도 (F-061)"
 
   - id: own-magazine
     tier: T3
@@ -210,8 +210,8 @@ sources:
     url: https://magazine.cheil.com/
     cadence: 월 하순에 1~3편 묶음
     method: 신규 글의 필자 소속, 원문 출처, 주제축을 기록한다
-    last_checked: 2026-08-12
-    last_item: "2026.07.24 /58457"
+    last_checked: 2026-08-14
+    last_item: "2026.07.24 /58457 (08-14 신규 0건)"
 
   - id: own-channels
     tier: T3
@@ -282,7 +282,7 @@ macro_axes:
     question: >-
       삼성전자의 마케팅 물량이 미디어와 크리에이티브로 갈라져 시장별로 재배분될 때,
       제일기획에는 어느 쪽 물량과 결정 권한이 남는가?
-    status: { 지지: 5, 반증: 0, 조건형성: 6, 중립: 3, 최신관측: F-047 }
+    status: { 지지: 5, 반증: 0, 조건형성: 7, 중립: 4, 최신관측: F-063 }
     checkpoints:
       - 8월 중 DART 반기보고서 등재 — 특수관계자 거래 지역별 표에서 호주·오세아니아 및 상반기 계열 비중의 추가 하락 여부
       - 2026-08-11~14 Samsung Group Asia Conference 이후 IR 자료·후속 보도 — 계열 물량·해외 재편 언급 여부
@@ -293,7 +293,7 @@ macro_axes:
     question: >-
       광고회사의 돈과 운영 권한이 사람 조직에서 AI 플랫폼·데이터 자산으로 옮겨가는 재편에서,
       제일기획의 이동은 어디까지 왔고 시장은 언제부터 그것을 전환 투자로 값을 쳐주는가?
-    status: { 지지: 12, 반증: 0, 조건형성: 7, 중립: 4, 최신관측: F-055 }
+    status: { 지지: 14, 반증: 0, 조건형성: 9, 중립: 5, 최신관측: F-065 }
     checkpoints:
       - 2026-08-17 LiveRamp 인수 주주 표결 — 가결 시 대행사 자본의 데이터 자산 이동이 기정사실화
       - 8월 중 반기보고서 등재(제일·이노션 동시) — 판관비·퇴직급여·무형자산(소프트웨어 개발비)·직원 현황에서 재배치의 방향 확인
@@ -307,7 +307,7 @@ macro_axes:
     question: >-
       광고주 예산이 검색·소셜을 떠나 AI 대화형 지면과 자율 집행 시스템으로 흘러갈 때,
       그 돈은 대행사를 거치는가 건너뛰는가 — 대행사는 집행 결정의 어디에 남는가?
-    status: { 지지: 7, 반증: 0, 조건형성: 4, 중립: 0, 최신관측: F-054 }
+    status: { 지지: 9, 반증: 0, 조건형성: 4, 중립: 0, 최신관측: F-062 }
     checkpoints:
       - 2026-08-17 AAM 기존 픽셀 자동 활성화 시행 — 광고주 데이터 연동의 기본값 전환, 옵트아웃 논란·집행 확대 여부
       - 챗GPT 광고 국내 시범의 정식 전환·확대 발표 여부(F-012 후속)와 브라질·멕시코 출시(F-042 예고)의 실행

@@ -145,6 +145,7 @@
      공유기 QoS·트래픽 관리 확인. **핫스팟에 붙여 ⑴ 을 재현**하면 자격 없이도 기기/망을 가른다.
   ⑹ 랜포트·케이블 교체. 전부 정상일 때만 호 크기를 줄인다 — 킷 상한(편집 규율)을
   한 기기의 조여진 상행에 맞춰 내리면 전 설치본이 판형을 잃는다
+  (증상별 분기·실측표·무죄 목록·진단 규율은 `docs/troubleshooting-network.md` 가 정본)
 - E5. **공개 전환 거절의 실체는 UI 문구가 아니라 API 응답이다** (2026-08-12 추적).
   Share → Anyone with the link 이 막히면 화면에는 이렇게 뜬다:
   "This version can't be shared publicly. Publish a new version or change the shared

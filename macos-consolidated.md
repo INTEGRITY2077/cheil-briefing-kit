@@ -45,7 +45,7 @@ GET https://claude.ai/            → HTTP/2 403 · cf-mitigated: challenge
 GET raw.githubusercontent.com/... → HTTP 200 (대조군 정상)
 ```
 
-공인 IP `<공인IP — 확인은 로컬에서 curl -s ifconfig.me>` — 한국 가정용 회선. 데이터센터 IP 도 VPN 출구도 아니다. **IP 평판 문제로 설명되지 않는다.**
+공인 IP 는 **한국 가정용 회선의 일반 대역**이었다 — 데이터센터 IP 도 VPN 출구도 아니다. **IP 평판 문제로 설명되지 않는다.** (실제 주소값은 개인정보라 기록하지 않는다. 재확인이 필요하면 운영자 로컬에서 `curl -s ifconfig.me` 로 본다.)
 
 즉 Cloudflare 는 공유 설정이나 아티팩트를 보고 막은 것이 아니라, **claude.ai 도메인 전반에서 브라우저가 아닌 클라이언트를 막고 있다.** 쿠키 없고 JS 안 도는 요청이 대상이고, `check_publish` 의 `urllib` 요청이 정확히 그 모양이다(`tools/check_formats.py` `fetch_anon` — "urllib 은 쿠키를 보내지 않으므로 그 자체로 로그아웃 독자 시뮬레이션이 된다").
 

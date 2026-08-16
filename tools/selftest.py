@@ -771,18 +771,25 @@ def main():
             # 함수로 떼고 합성 사다리(--fixture)로 계약만 시험한다.
             ("uplink 정상 기기 — 목표 완주로 통과", "check_uplink.py",
              ["--fixture", "pass"], 0, None, None, "통과: 3MB"),
-            ("uplink 셰이퍼 — 버스트·지속 상한을 함께 보고", "check_uplink.py",
+            ("uplink 버스트 붕괴 — 버스트·지속 상한을 함께 보고", "check_uplink.py",
              ["--fixture", "shaper"], 1, None, None, "이것이 지속 상한이다"),
             # 첫 단은 TLS 수립 비용으로 느리다. 그걸 붕괴로 읽으면 지속 상한을 엉뚱하게
             # 보고한다 — 실제로 맥 실측에서 287KB/s 를 지속 상한이라 찍었던 버그다.
             ("uplink 첫 단 TLS 잡음을 지속 상한으로 오독 금지", "check_uplink.py",
              ["--fixture", "tls-noise"], 1, None, None, "!지속 상한"),
-            # 반대편 — 고르게 느린 회선을 셰이퍼로 몰면 멀쩡한 원인 추적을 망친다.
-            ("uplink 고르게 좁은 상행을 셰이퍼로 몰지 않는다", "check_uplink.py",
-            # 「셰이퍼가 아니라」라는 부정문에도 그 낱말이 들어가므로, 단정 문구만 짚는다.
-             ["--fixture", "narrow"], 1, None, None, "!**셰이퍼**다"),
-            # 이 게이트의 존재 이유 — 셰이퍼 앞에서 호 크기부터 깎는 오진을 막는 것.
-            ("uplink 셰이퍼 보고는 호 크기 축소를 금지한다", "check_uplink.py",
+            # 반대편 — 고르게 느린 회선을 붕괴로 몰면 멀쩡한 원인 추적을 망친다.
+            ("uplink 고르게 좁은 상행을 붕괴로 몰지 않는다", "check_uplink.py",
+             ["--fixture", "narrow"], 1, None, None, "!**버스트 붕괴**다"),
+            # 원인을 단정하지 않는다 — 같은 사다리 모양이 송신 측 버퍼에서도, 경로
+            # 셰이퍼에서도 나온다 (2026-08-16 A/B/A 정정). 「셰이퍼다」로 단정하면
+            # 맥의 확정 사례(autosndbufmax)를 영원히 못 찾는다.
+            ("uplink 붕괴 보고는 원인을 단정하지 않는다", "check_uplink.py",
+             ["--fixture", "shaper"], 1, None, None, "!**셰이퍼**다"),
+            # 확정 사례의 확인 명령을 보고에 실어야 한다 — 자격 없이 즉시 볼 수 있다.
+            ("uplink 붕괴 보고에 송신 버퍼 확인 경로", "check_uplink.py",
+             ["--fixture", "shaper"], 1, None, None, "autosndbufmax"),
+            # 이 게이트의 존재 이유 — 붕괴 앞에서 호 크기부터 깎는 오진을 막는 것.
+            ("uplink 붕괴 보고는 호 크기 축소를 금지한다", "check_uplink.py",
              ["--fixture", "shaper"], 1, None, None, "호 크기를 깎지 마라"),
             ("uplink 최소 단조차 실패 — 판정 불가(2)", "check_uplink.py",
              ["--fixture", "undecided"], 2, None, None, "판정 불가"),

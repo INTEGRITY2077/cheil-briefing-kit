@@ -1,7 +1,7 @@
 # macOS 설치 실측 결과 — 이슈 #33 체크리스트 대조
 
 - **실측일**: 2026-08-14
-- **킷 버전**: v2026.08.14.5 (`a1de947`) — `check_version.py` 종료코드 0 (원격 일치)
+- **킷 버전**: v2026.08.14.5 (`7037447`) — `check_version.py` 종료코드 0 (원격 일치)
 - **실측 환경**: macOS Darwin 25.3.0 · arm64 (Apple Silicon, T8132) · Mac mini
 - **셸**: zsh · **Homebrew**: 6.0.17 (`/opt/homebrew/bin/brew`, 존재)
 - **python3**: 3.9.6 (`/usr/bin/python3`, Command Line Tools 동봉) · **pip**: 21.2.4

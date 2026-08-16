@@ -767,6 +767,27 @@ def main():
             # D8 이 검증된 임계가 아니라는 사실을 출력으로 올린다
             ("size 통과 줄에 편집 규율 꼬리", "check_size.py",
              ["output/web/2026-08-30.html"], 0, None, None, "D8 은 편집 규율이다"),
+            # E8 상행 사전판정 (2026-08-16 신설). 실행이 망을 타므로 판정을 순수
+            # 함수로 떼고 합성 사다리(--fixture)로 계약만 시험한다.
+            ("uplink 정상 기기 — 목표 완주로 통과", "check_uplink.py",
+             ["--fixture", "pass"], 0, None, None, "통과: 3MB"),
+            ("uplink 셰이퍼 — 버스트·지속 상한을 함께 보고", "check_uplink.py",
+             ["--fixture", "shaper"], 1, None, None, "이것이 지속 상한이다"),
+            # 첫 단은 TLS 수립 비용으로 느리다. 그걸 붕괴로 읽으면 지속 상한을 엉뚱하게
+            # 보고한다 — 실제로 맥 실측에서 287KB/s 를 지속 상한이라 찍었던 버그다.
+            ("uplink 첫 단 TLS 잡음을 지속 상한으로 오독 금지", "check_uplink.py",
+             ["--fixture", "tls-noise"], 1, None, None, "!지속 상한"),
+            # 반대편 — 고르게 느린 회선을 셰이퍼로 몰면 멀쩡한 원인 추적을 망친다.
+            ("uplink 고르게 좁은 상행을 셰이퍼로 몰지 않는다", "check_uplink.py",
+            # 「셰이퍼가 아니라」라는 부정문에도 그 낱말이 들어가므로, 단정 문구만 짚는다.
+             ["--fixture", "narrow"], 1, None, None, "!**셰이퍼**다"),
+            # 이 게이트의 존재 이유 — 셰이퍼 앞에서 호 크기부터 깎는 오진을 막는 것.
+            ("uplink 셰이퍼 보고는 호 크기 축소를 금지한다", "check_uplink.py",
+             ["--fixture", "shaper"], 1, None, None, "호 크기를 깎지 마라"),
+            ("uplink 최소 단조차 실패 — 판정 불가(2)", "check_uplink.py",
+             ["--fixture", "undecided"], 2, None, None, "판정 불가"),
+            ("uplink 없는 픽스처 — 사용법 오류(64)", "check_uplink.py",
+             ["--fixture", "nope"], 64, None, None),
             ("sync 유닉스 경로 누출", "sync_skill.py",
              ["--check", j("master-leaky.md")], 1, None, None),
             ("sync 클린 마스터 (--check 무기록)", "sync_skill.py",
